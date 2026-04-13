@@ -1,7 +1,7 @@
 #!/bin/sh
 # This is a generated file; do not edit or check into version control.
-export "FLUTTER_ROOT=C:\fluttersrc\flutter_windows_3.41.4-stable\flutter"
-export "FLUTTER_APPLICATION_PATH=E:\tank_speak"
+export "FLUTTER_ROOT=C:\flutter sdk\flutter_windows_3.41.6-stable\flutter"
+export "FLUTTER_APPLICATION_PATH=C:\Users\Admin\Desktop\tank_speak"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_TARGET=lib\main.dart"
 export "FLUTTER_BUILD_DIR=build"

@@ -1,11 +1,18 @@
 class AuthService {
+  bool isLoggedIn = false;
+
   Future<bool> login(String email, String password) async {
-    await Future.delayed(const Duration(seconds: 1));
+    await Future.delayed(Duration(seconds: 1));
+    isLoggedIn = true;
+    return true;
+  }
 
-    if (email == "admin@tankspeak.com" && password == "123456") {
-      return true;
-    }
+  Future<bool> register(String email, String password) async {
+    await Future.delayed(Duration(seconds: 1));
+    return true;
+  }
 
-    return false;
+  void logout() {
+    isLoggedIn = false;
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/auth_service.dart';
-import '../../services/token_storage.dart';
+import 'register_screen.dart';
+import '../pages/home_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,31 +11,32 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final emailController = TextEditingController();
-  final passwordController = TextEditingController();
+  final AuthService auth = AuthService();
 
-  bool loading = false;
+  final TextEditingController email = TextEditingController();
+  final TextEditingController password = TextEditingController();
+
+  bool isLoading = false;
+  bool obscurePassword = true;
 
   void login() async {
-    setState(() => loading = true);
+    if (email.text.isEmpty || password.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields")),
+      );
+      return;
+    }
 
-    final auth = AuthService();
-    final success = await auth.login(
-      emailController.text,
-      passwordController.text,
-    );
+    setState(() => isLoading = true);
 
-    setState(() => loading = false);
+    bool success = await auth.login(email.text, password.text);
+
+    setState(() => isLoading = false);
 
     if (success) {
-      await TokenStorage().saveToken("dummy_token_123");
-
-      if (!mounted) return;
-
-      Navigator.pushReplacementNamed(context, '/home');
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid credentials")),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => HomeScreen()),
       );
     }
   }
@@ -42,36 +44,161 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Text(
-                "Tank Speak Login",
-                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 20),
-
-              TextField(
-                controller: emailController,
-                decoration: const InputDecoration(labelText: "Email"),
-              ),
-
-              TextField(
-                controller: passwordController,
-                obscureText: true,
-                decoration: const InputDecoration(labelText: "Password"),
-              ),
-
-              const SizedBox(height: 20),
-
-              ElevatedButton(
-                onPressed: loading ? null : login,
-                child: Text(loading ? "Loading..." : "Login"),
-              ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Color(0xFF0F2027),
+              Color(0xFF203A43),
+              Color(0xFF2C5364),
             ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 28),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // HEADER SECTION
+                  const SizedBox(height: 40),
+
+                  const Icon(
+                    Icons.local_gas_station,
+                    color: Colors.white,
+                    size: 45,
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  const Text(
+                    "Welcome to TankSpeak",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  const Text(
+                    "Sign in to monitor your fuel system",
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                    ),
+                  ),
+
+                  const SizedBox(height: 40),
+
+                  // FORM SECTION
+                  const Text(
+                    "Email",
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 8),
+
+                  TextField(
+                    controller: email,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.08),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  const Text(
+                    "Password",
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                  const SizedBox(height: 8),
+
+                  TextField(
+                    controller: password,
+                    obscureText: obscurePassword,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.08),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide.none,
+                      ),
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          obscurePassword
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Colors.white70,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            obscurePassword = !obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  // BUTTON
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      onPressed: isLoading ? null : login,
+                      child: isLoading
+                          ? const CircularProgressIndicator(
+                        color: Colors.white,
+                      )
+                          : const Text(
+                        "Sign In",
+                        style: TextStyle(fontSize: 16),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // FOOTER TEXT
+                  Center(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => RegisterScreen()),
+                        );
+                      },
+                      child: Text(
+                        "Don't have an account? Register here",
+                        style: TextStyle(
+                          color: Colors.orange,
+                          fontSize: 12,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),
