@@ -11,6 +11,7 @@
         "dio",
         "fl_chart",
         "flutter",
+        "flutter_blue_plus",
         "flutter_secure_storage",
         "shared_preferences"
       ],
@@ -42,6 +43,13 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "flutter_blue_plus",
+      "version": "1.31.15",
+      "dependencies": [
+        "flutter"
       ]
     },
     {
@@ -196,6 +204,14 @@
         "stream_channel",
         "string_scanner",
         "term_glyph"
+      ]
+    },
+    {
+      "name": "equatable",
+      "version": "2.0.8",
+      "dependencies": [
+        "collection",
+        "meta"
       ]
     },
     {
@@ -642,14 +658,6 @@
       "version": "3.0.7",
       "dependencies": [
         "typed_data"
-      ]
-    },
-    {
-      "name": "equatable",
-      "version": "2.0.8",
-      "dependencies": [
-        "collection",
-        "meta"
       ]
     }
   ],
