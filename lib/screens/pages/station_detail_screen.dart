@@ -1,5 +1,7 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
-import '../../models/fuel.dart';
+import '../../models/tank.dart';
 import '../../models/gas_station.dart';
 import 'tank_detail_screen.dart';
 class StationDetailScreen extends StatelessWidget {
@@ -8,16 +10,15 @@ class StationDetailScreen extends StatelessWidget {
   const StationDetailScreen({super.key, required this.station});
 
   // 🔥 FAKE TANK LEVEL LOGIC
-  double getTankLevel(Fuel fuel) {
-    if (fuel.fillAlert.toLowerCase() == "low") {
-      return 0.2;
-    }
+  double getTankLevel(Tank tank) {
+    if (tank.maxCapacity <= 0) return 0.0;
 
-    if (fuel.anticipatedDryUp.toLowerCase().contains("1")) {
-      return 0.1;
-    }
+    final level = tank.currentVolume / tank.maxCapacity;
 
-    return 0.7;
+    if (level < 0) return 0.0;
+    if (level > 1) return 1.0;
+
+    return level;
   }
 
   // COLOR LOGIC
@@ -33,7 +34,7 @@ class StationDetailScreen extends StatelessWidget {
       backgroundColor: const Color(0xFF0F2027),
 
       appBar: AppBar(
-        title: Text(station.name),
+        title: Text(station.companyName),
         backgroundColor: const Color(0xFF0F2027),
         foregroundColor: Colors.white,
       ),
@@ -54,7 +55,7 @@ class StationDetailScreen extends StatelessWidget {
             const SizedBox(height: 20),
 
             Text(
-              "Tanks (${station.fuels.length})",
+              "Tanks (${station.tanks.length})",
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -66,11 +67,11 @@ class StationDetailScreen extends StatelessWidget {
 
             Expanded(
               child: ListView.builder(
-                itemCount: station.fuels.length,
+                itemCount: station.tanks.length,
                 itemBuilder: (context, index) {
-                  final fuel = station.fuels[index];
+                  final tank = station.tanks[index];
 
-                  final level = getTankLevel(fuel);
+                  final level = getTankLevel(tank);
                   final color = getTankColor(level);
 
 
@@ -79,7 +80,7 @@ class StationDetailScreen extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => TankDetailScreen(fuel: fuel),
+                            builder: (_) => TankDetailScreen(tank: tank),
                           ),
                         );
                       },
@@ -99,7 +100,7 @@ class StationDetailScreen extends StatelessWidget {
 
                         // ⛽ NAME
                         Text(
-                          fuel.name,
+                          tank.productName,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 16,
@@ -145,7 +146,7 @@ class StationDetailScreen extends StatelessWidget {
 
                         // DETAILS
                         Text(
-                          "Capacity: ${fuel.tankCapacity} L",
+                          "Capacity: ${tank.maxCapacity} L",
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.7),
                           ),
@@ -154,7 +155,7 @@ class StationDetailScreen extends StatelessWidget {
                         const SizedBox(height: 4),
 
                         Text(
-                          "Avg Throughput: ${fuel.averageThroughput} L/hr",
+                          "Avg Throughput: ${tank.length} L/hr",
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.7),
                           ),
@@ -163,7 +164,7 @@ class StationDetailScreen extends StatelessWidget {
                         const SizedBox(height: 4),
 
                         Text(
-                          "Dry Up: ${fuel.anticipatedDryUp}",
+                          "Dry Up: ${tank.currentVolume}",
                           style: TextStyle(
                             color: Colors.white.withOpacity(0.7),
                           ),
@@ -172,7 +173,7 @@ class StationDetailScreen extends StatelessWidget {
                         const SizedBox(height: 4),
 
                         Text(
-                          "Fill Alert: ${fuel.fillAlert}",
+                          "Fill Alert: ${tank.status}",
                           style: const TextStyle(
                             color: Colors.orangeAccent,
                             fontWeight: FontWeight.w600,

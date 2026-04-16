@@ -39,6 +39,7 @@ dependencies:
   dio: ^5.9.2
   fl_chart: ^1.2.0
   flutter_blue_plus: 1.31.15
+  http: ^1.6.0
 
 dev_dependencies:
   flutter_test:

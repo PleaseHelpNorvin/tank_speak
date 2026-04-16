@@ -15,7 +15,11 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
 
   List<ScanResult> devices = [];
   StreamSubscription<List<ScanResult>>? scanSub;
-  StreamSubscription<String>? statusSub;
+  StreamSubscription<bool>? statusSub;
+  StreamSubscription<String>? deviceSub;
+
+  bool sheetStatus = false;
+  String connectedDeviceInfo = "";
   bool isScanning = false;
   String status = "";
 
@@ -158,11 +162,13 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
                         await statusSub?.cancel();
 
                         // ✅ listen LIVE status from ESP32
-                        statusSub = ble.listenStatus().listen((result) {
+                        statusSub = ble.listenStatus().listen((isConnected) {
                           setModalState(() {
-                            sheetStatus = result; // raw ESP32 message
+                            sheetStatus = isConnected ? "Connected" : "Disconnected";
                           });
                         });
+
+
 
                       } catch (e) {
                         setModalState(() {

@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:fl_chart/fl_chart.dart';
-import '../../models/fuel.dart';
-import '../../models/tank_reading.dart';
+import '../../models/tank.dart';
+import '../../models/volume_reading.dart';
 
 class TankDetailScreen extends StatefulWidget {
-  final Fuel fuel;
+  final Tank tank;
 
-  const TankDetailScreen({super.key, required this.fuel});
+  const TankDetailScreen({super.key, required this.tank});
 
   @override
   State<TankDetailScreen> createState() => _TankDetailScreenState();
@@ -15,8 +15,8 @@ class TankDetailScreen extends StatefulWidget {
 class _TankDetailScreenState extends State<TankDetailScreen> {
   String selectedFilter = "Day";
 
-  List<TankReading> getFilteredData() {
-    final data = widget.fuel.readings ?? [];
+  List<VolumeReading> getFilteredData() {
+    final data = widget.tank.readings;
     final now = DateTime.now();
 
     return data.where((r) {
@@ -39,7 +39,7 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
     }).toList();
   }
 
-  List<FlSpot> getLineSpots(List<TankReading> data) {
+  List<FlSpot> getLineSpots(List<VolumeReading> data) {
     return List.generate(data.length, (index) {
       final volumeKL = data[index].volume / 1000;
       return FlSpot(index.toDouble(), volumeKL);
@@ -58,7 +58,7 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
       backgroundColor: const Color(0xFF0F2027),
 
       appBar: AppBar(
-        title: Text("${widget.fuel.name} Analytics"),
+        title: Text("${widget.tank.productName} Analytics"),
         backgroundColor: const Color(0xFF0F2027),
         foregroundColor: Colors.white,
       ),
@@ -206,22 +206,22 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    "Tank Capacity: ${widget.fuel.tankCapacity} L",
+                    "Tank Capacity: ${widget.tank.maxCapacity} L",
                     style: const TextStyle(color: Colors.white),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    "Product: ${widget.fuel.name}",
+                    "Product: ${widget.tank.productName}",
                     style: const TextStyle(color: Colors.white),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    "Average Tank Throughput: ${widget.fuel.averageThroughput} L/day",
+                    "Average Tank Throughput: ${widget.tank.currentVolume} L/day",
                     style: const TextStyle(color: Colors.white),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    "Anticipated Dry Up: ${widget.fuel.anticipatedDryUp}",
+                    "Anticipated Dry Up: ${widget.tank.status}",
                     style: const TextStyle(color: Colors.white),
                   ),
                   const SizedBox(height: 6),
@@ -238,15 +238,15 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
                           vertical: 4,
                         ),
                         decoration: BoxDecoration(
-                          color: widget.fuel.fillAlert == "High"
+                          color: widget.tank.status == "High"
                               ? Colors.red
-                              : widget.fuel.fillAlert == "Low"
+                              : widget.tank.status == "Low"
                               ? Colors.orange
                               : Colors.green,
                           borderRadius: BorderRadius.circular(20),
                         ),
                         child: Text(
-                          widget.fuel.fillAlert,
+                          widget.tank.status,
                           style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.bold,

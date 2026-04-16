@@ -1,37 +1,36 @@
-import 'fuel.dart';
+import 'owner.dart';
+import 'area_manager.dart';
+import 'tank.dart';
 
 class GasStation {
   final String id;
-  final String name;
+  final Owner owner;
+  final AreaManager areaManager;
+  final String companyName;
   final String address;
-  final String manager;
-  final String contactNumber;
   final String businessHours;
-  final String timeStamp;
-  List<Fuel> fuels;
+  final List<Tank> tanks;
 
   GasStation({
     required this.id,
-    required this.name,
+    required this.owner,
+    required this.areaManager,
+    required this.companyName,
     required this.address,
-    required this.manager,
-    required this.contactNumber,
     required this.businessHours,
-    required this.timeStamp,
-    required this.fuels,
+    required this.tanks,
   });
 
   factory GasStation.fromJson(Map<String, dynamic> json) {
     return GasStation(
       id: json['id'],
-      name: json['name'],
+      owner: Owner.fromJson(json['owner']),
+      areaManager: AreaManager.fromJson(json['area_manager']),
+      companyName: json['company_name'],
       address: json['address'],
-      manager: json['manager'],
-      contactNumber: json['contactNumber'],
-      businessHours: json['businessHours'],
-      timeStamp: json['timeStamp'],
-      fuels: (json['fuels'] as List)
-          .map((e) => Fuel.fromJson(e))
+      businessHours: json['business_hours'],
+      tanks: (json['tanks'] as List)
+          .map((e) => Tank.fromJson(e))
           .toList(),
     );
   }

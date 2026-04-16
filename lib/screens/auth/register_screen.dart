@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -9,7 +10,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final AuthService auth = AuthService();
+  final AuthService auth = AuthService(ApiService());
 
   final TextEditingController email = TextEditingController();
   final TextEditingController password = TextEditingController();

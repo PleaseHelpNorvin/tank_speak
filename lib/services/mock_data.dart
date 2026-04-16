@@ -1,103 +1,102 @@
 import '../models/gas_station.dart';
-import '../models/fuel.dart';
-import '../models/tank_reading.dart';
+import '../models/owner.dart';
+import '../models/area_manager.dart';
+import '../models/tank.dart';
+import '../models/volume_reading.dart';
 
 class MockData {
-
-  static List<TankReading> generateReadings({
-    required String tankName,
-    required int startVolume,
-    required int steps,
-    int stepDrop = 200,
-  }) {
-    List<TankReading> readings = [];
-
-    int volume = startVolume;
-    DateTime now = DateTime.now();
-
-    for (int i = 0; i < steps; i++) {
-      readings.add(
-        TankReading(
-          id: "r_${tankName}_$i",
-          tankName: tankName,
-          volume: volume.toDouble(),
-
-          /// FIXED TIMESTAMP (this is the key fix)
-          timeStamp: now
-              .subtract(Duration(days: steps - i))
-              .toString(),
-
-          addedVolume: stepDrop.toDouble(),
-        ),
-      );
-
-      volume -= stepDrop;
-      if (volume < 0) volume = 0;
-    }
-
-    return readings; // already oldest → newest
-  }
-
   static List<GasStation> getStations() {
     return [
       GasStation(
-        id: "1",
-        name: "TankSpeak Station",
-        address: "Cebu City",
-        manager: "Juan Dela Cruz",
-        contactNumber: "09123456789",
-        businessHours: "8AM - 10PM",
-        timeStamp: DateTime.now().toString(),
-        fuels: [
-          Fuel(
-            id: "f1",
-            name: "Diesel",
-            tankCapacity: 10000,
-            averageThroughput: 500,
-            anticipatedDryUp: "2 days",
-            fillAlert: "Low",
-            timeStamp: DateTime.now().toString(),
-            readings: generateReadings(
-              tankName: "Diesel Tank",
-              startVolume: 8000,
-              steps: 20,
-              stepDrop: 300,
-            ),
-          ),
+        id: "gs_001",
+        companyName: "Shell Cebu Mabolo",
+        address: "Mabolo, Cebu City",
+        businessHours: "24/7",
 
-          Fuel(
-            id: "f2",
-            name: "Unleaded",
-            tankCapacity: 8000,
-            averageThroughput: 600,
-            anticipatedDryUp: "1 day",
-            fillAlert: "High",
-            timeStamp: DateTime.now().toString(),
-            readings: generateReadings(
-              tankName: "Unleaded Tank",
-              startVolume: 6000,
-              steps: 20,
-              stepDrop: 250,
-            ),
-          ),
+        owner: Owner(
+          id: "owner_001",
+          name: "Juan Dela Cruz",
+          contactInfo: "09171234567",
+        ),
 
-          Fuel(
-            id: "f3",
-            name: "Premium",
-            tankCapacity: 12000,
-            averageThroughput: 700,
-            anticipatedDryUp: "3 days",
-            fillAlert: "Normal",
-            timeStamp: DateTime.now().toString(),
-            readings: generateReadings(
-              tankName: "Premium Tank",
-              startVolume: 9000,
-              steps: 20,
-              stepDrop: 300,
-            ),
+        areaManager: AreaManager(
+          id: "am_001",
+          name: "Maria Santos",
+          contactInfo: "maria.santos@email.com",
+          companyName: "Shell Philippines",
+        ),
+
+        tanks: [
+          Tank(
+            id: "tank_001",
+            productName: "Diesel",
+            currentVolume: 12000,
+            status: "normal",
+            maxCapacity: 20000,
+            radius: 2.5,
+            length: 8.0,
+            readings: _generateReadings(12000),
+          ),
+          Tank(
+            id: "tank_002",
+            productName: "Gasoline",
+            currentVolume: 3000,
+            status: "low",
+            maxCapacity: 20000,
+            radius: 2.5,
+            length: 8.0,
+            readings: _generateReadings(3000),
+          ),
+        ],
+      ),
+
+      GasStation(
+        id: "gs_002",
+        companyName: "Petron Colon",
+        address: "Colon Street, Cebu City",
+        businessHours: "5:00 AM - 11:00 PM",
+
+        owner: Owner(
+          id: "owner_002",
+          name: "Carlos Reyes",
+          contactInfo: "09981234567",
+        ),
+
+        areaManager: AreaManager(
+          id: "am_002",
+          name: "Anna Lopez",
+          contactInfo: "anna.lopez@email.com",
+          companyName: "Petron Corp",
+        ),
+
+        tanks: [
+          Tank(
+            id: "tank_003",
+            productName: "Diesel",
+            currentVolume: 18000,
+            status: "high",
+            maxCapacity: 20000,
+            radius: 3.0,
+            length: 10.0,
+            readings: _generateReadings(18000),
           ),
         ],
       ),
     ];
+  }
+
+  /// 🔥 Generate fake historical readings
+  static List<VolumeReading> _generateReadings(double baseVolume) {
+    final now = DateTime.now();
+
+    return List.generate(15, (i) {
+      return VolumeReading(
+        id: "r_$i",
+        volume: baseVolume - (i * 200),
+        timeStamp: now
+            .subtract(Duration(hours: 15 - i))
+            .toIso8601String(),
+      );
+    });
   }
 }

@@ -1,18 +1,38 @@
-class AuthService {
-  bool isLoggedIn = false;
+import '../services/api_service.dart';
+import '../models/auth_response.dart';
 
-  Future<bool> login(String email, String password) async {
-    await Future.delayed(Duration(seconds: 1));
+class AuthService {
+  final ApiService _apiService;
+
+  AuthService(this._apiService);
+
+  bool isLoggedIn = false;
+  String? token;
+  String? type;
+
+  Future<AuthResponse> login(String username, String password) async {
+    final response = await _apiService.login(
+      username: username,
+      password: password,
+    );
+
     isLoggedIn = true;
-    return true;
+    token = response.token;
+    type = response.type;
+
+    return response;
   }
 
-  Future<bool> register(String email, String password) async {
-    await Future.delayed(Duration(seconds: 1));
-    return true;
+  Future<bool> register(String username, String password) async {
+    return await _apiService.register(
+      username: username,
+      password: password,
+    );
   }
 
   void logout() {
     isLoggedIn = false;
+    token = null;
+    type = null;
   }
 }

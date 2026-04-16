@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 import 'register_screen.dart';
 import '../pages/home_screen.dart';
@@ -11,7 +12,7 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  final AuthService auth = AuthService();
+  final AuthService auth = AuthService(ApiService());
 
   final TextEditingController email = TextEditingController();
   final TextEditingController password = TextEditingController();
@@ -29,14 +30,23 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => isLoading = true);
 
-    bool success = await auth.login(email.text, password.text);
+    try {
+      final response = await auth.login(email.text, password.text);
 
-    setState(() => isLoading = false);
+      setState(() => isLoading = false);
 
-    if (success) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => HomeScreen()),
+      // success if token exists
+      if (response.token.isNotEmpty) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => HomeScreen()),
+        );
+      }
+    } catch (e) {
+      setState(() => isLoading = false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
       );
     }
   }

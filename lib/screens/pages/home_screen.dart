@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'create_gas_station_screen.dart';
 import 'station_detail_screen.dart';
 import 'profile_screen.dart';
 import '../../services/api_service.dart';
@@ -28,16 +29,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // 🔥 STATUS LOGIC (temporary mock rules)
   String getStatus(GasStation station) {
-    if (station.fuels.isEmpty) return "normal";
+    if (station.tanks.isEmpty) return "normal";
 
-    final fuel = station.fuels.first;
+    final tank = station.tanks.first;
 
-    if (fuel.fillAlert.toLowerCase() == "high") {
-      return "fill";
+    final fillPercent = tank.currentVolume / tank.maxCapacity;
+
+    if (fillPercent <= 0.15) {
+      return "dry";
     }
 
-    if (fuel.anticipatedDryUp.toLowerCase().contains("1")) {
-      return "dry";
+    if (fillPercent >= 0.85) {
+      return "fill";
     }
 
     return "normal";
@@ -98,6 +101,18 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.orange,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const CreateGasStationScreen(),
+            ),
+          );
+        },
+        child: const Icon(Icons.add),
+      ),
       backgroundColor: const Color(0xFF0F2027),
 
       // 🔥 APP BAR
@@ -183,7 +198,7 @@ class _HomeScreenState extends State<HomeScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                station.name,
+                                station.companyName,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 18,
@@ -240,12 +255,12 @@ class _HomeScreenState extends State<HomeScreen> {
                       children: [
                         _infoBox(
                           "Manager",
-                          station.manager,
+                          station.areaManager.name,
                           Icons.person,
                         ),
                         _infoBox(
                           "Contact",
-                          station.contactNumber,
+                          station.areaManager.contactInfo,
                           Icons.phone,
                         ),
                         _infoBox(
