@@ -12,6 +12,8 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final AuthService auth = AuthService(ApiService());
 
+  final TextEditingController username = TextEditingController();
+  final TextEditingController name = TextEditingController();
   final TextEditingController email = TextEditingController();
   final TextEditingController password = TextEditingController();
   final TextEditingController confirmPassword = TextEditingController();
@@ -23,7 +25,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   void handleRegister() async {
     if (email.text.isEmpty ||
         password.text.isEmpty ||
-        confirmPassword.text.isEmpty) {
+        confirmPassword.text.isEmpty ||
+        username.text.isEmpty ||
+        name.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill all fields")),
       );
@@ -39,8 +43,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
     setState(() => isLoading = true);
 
-    bool success = await auth.register(email.text, password.text);
-
+    bool success = await auth.register(username.text, name.text, email.text, password.text);
     setState(() => isLoading = false);
 
     if (success) {
@@ -109,6 +112,42 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
                 const SizedBox(height: 40),
 
+                const Text("Full Name", style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 8),
+
+                TextField(
+                  controller: name,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.08),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+                // USERNAME
+                const Text("Username", style: TextStyle(color: Colors.white70)),
+                const SizedBox(height: 8),
+
+                TextField(
+                  controller: username,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    filled: true,
+                    fillColor: Colors.white.withOpacity(0.08),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+
                 // EMAIL
                 const Text("Email",
                     style: TextStyle(color: Colors.white70)),
@@ -126,7 +165,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 20),
 
                 // PASSWORD

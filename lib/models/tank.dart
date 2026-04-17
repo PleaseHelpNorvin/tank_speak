@@ -1,38 +1,39 @@
-import 'volume_reading.dart';
-
-class Tank {
+class Device {
   final String id;
-  final String productName;
-  final double currentVolume;
-  final String status;
-  final double maxCapacity;
-  final double radius;
-  final double length;
-  final List<VolumeReading> readings;
+  final int stationId;
+  final String name;
+  final String deviceKey;
+  final String type;
+  final bool isActive;
+  final DateTime? lastSeen;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
-  Tank({
+  Device({
     required this.id,
-    required this.productName,
-    required this.currentVolume,
-    required this.status,
-    required this.maxCapacity,
-    required this.radius,
-    required this.length,
-    required this.readings,
+    required this.stationId,
+    required this.name,
+    required this.deviceKey,
+    required this.type,
+    required this.isActive,
+    this.lastSeen,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
-  factory Tank.fromJson(Map<String, dynamic> json) {
-    return Tank(
-      id: json['id'],
-      productName: json['product_name'],
-      currentVolume: (json['current_volume'] as num).toDouble(),
-      status: json['status'],
-      maxCapacity: (json['max_capacity'] as num).toDouble(),
-      radius: (json['radius'] as num).toDouble(),
-      length: (json['length'] as num).toDouble(),
-      readings: (json['readings'] as List)
-          .map((e) => VolumeReading.fromJson(e))
-          .toList(),
+  factory Device.fromJson(Map<String, dynamic> json) {
+    return Device(
+      id: json['id'].toString(),
+      stationId: json['station_id'],
+      name: json['name'] ?? '',
+      deviceKey: json['device_key'] ?? '',
+      type: json['type'] ?? '',
+      isActive: json['is_active'] ?? false,
+      lastSeen: json['last_seen'] != null
+          ? DateTime.parse(json['last_seen'])
+          : null,
+      createdAt: DateTime.parse(json['created_at']),
+      updatedAt: DateTime.parse(json['updated_at']),
     );
   }
 }

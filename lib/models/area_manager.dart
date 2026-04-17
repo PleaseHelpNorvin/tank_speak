@@ -14,7 +14,7 @@ class AreaManager {
   factory AreaManager.fromJson(Map<String, dynamic> json) {
     return AreaManager(
       id: json['id'],
-      name: json['name'],
+      name: json['name'] ?? '',
       contactInfo: json['contact_info'],
       companyName: json['company_name'],
     );

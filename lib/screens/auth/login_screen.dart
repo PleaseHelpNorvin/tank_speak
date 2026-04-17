@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
+import '../pages/splash_screen.dart';
 import 'register_screen.dart';
 import '../pages/home_screen.dart';
 
@@ -14,14 +15,14 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final AuthService auth = AuthService(ApiService());
 
-  final TextEditingController email = TextEditingController();
+  final TextEditingController username = TextEditingController();
   final TextEditingController password = TextEditingController();
 
   bool isLoading = false;
   bool obscurePassword = true;
 
   void login() async {
-    if (email.text.isEmpty || password.text.isEmpty) {
+    if (username.text.isEmpty || password.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill all fields")),
       );
@@ -31,7 +32,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => isLoading = true);
 
     try {
-      final response = await auth.login(email.text, password.text);
+      final response = await auth.login(username.text, password.text);
 
       setState(() => isLoading = false);
 
@@ -39,7 +40,17 @@ class _LoginScreenState extends State<LoginScreen> {
       if (response.token.isNotEmpty) {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => HomeScreen()),
+          PageRouteBuilder(
+            pageBuilder: (_, __, ___) => const SplashScreen(),
+            transitionDuration: const Duration(milliseconds: 500),
+            reverseTransitionDuration: const Duration(milliseconds: 500),
+            transitionsBuilder: (_, animation, __, child) {
+              return FadeTransition(
+                opacity: animation,
+                child: child,
+              );
+            },
+          ),
         );
       }
     } catch (e) {
@@ -107,15 +118,17 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   // FORM SECTION
                   const Text(
-                    "Email",
+                    "Username",
                     style: TextStyle(color: Colors.white70),
                   ),
                   const SizedBox(height: 8),
 
                   TextField(
-                    controller: email,
+                    controller: username,
                     style: const TextStyle(color: Colors.white),
                     decoration: InputDecoration(
+                      hintText: "Enter your username",
+                      hintStyle: TextStyle(color: Colors.white38),
                       filled: true,
                       fillColor: Colors.white.withOpacity(0.08),
                       border: OutlineInputBorder(
