@@ -33,29 +33,35 @@ class _SplashScreenState extends State<SplashScreen> {
         return;
       }
 
-      await auth.getMe();
+      final me = await auth.getMe();
+      print("ME OK");
 
       final stationResponse = await api.fetchStations();
+      print("STATIONS OK");
+
       final inviteResponse = await api.fetchInvitations();
+      print("INVITES OK");
 
       final stations = stationResponse.items;
       final invites = inviteResponse.items;
 
       // 1. Already has station → go app
       if (stations.isNotEmpty) {
-        goTo(const HomeScreen());
+        goTo( HomeScreen(me:me));
         return;
       }
 
       // 2. No station but has invites → must handle first
       if (invites.isNotEmpty) {
-        goTo(const InvitationsScreen());
+        goTo(InvitationsScreen(me :me));
         return;
       }
 
       // 3. New user → create station
-      goTo(const CreateGasStationScreen());
-    } catch (e) {
+      goTo(CreateGasStationScreen(me: me));
+    } catch (e, stack) {
+      print("ERROR: $e");
+      print("STACK TRACE: $stack");
       print(e);
       await auth.logout();
       goTo(const LoginScreen());

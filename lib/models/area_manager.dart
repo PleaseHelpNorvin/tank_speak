@@ -1,22 +1,28 @@
 class AreaManager {
-  final String id;
+  final int id;
   final String name;
-  final String contactInfo;
-  final String companyName;
+  final String phone;
+  final String address;
+  final String businessHours;
+  final String extendedBusinessHours;
 
   AreaManager({
     required this.id,
     required this.name,
-    required this.contactInfo,
-    required this.companyName,
+    required this.phone,
+    required this.address,
+    required this.businessHours,
+    required this.extendedBusinessHours,
   });
 
   factory AreaManager.fromJson(Map<String, dynamic> json) {
     return AreaManager(
-      id: json['id'],
+      id: int.tryParse(json['id'].toString()) ?? 0,
       name: json['name'] ?? '',
-      contactInfo: json['contact_info'],
-      companyName: json['company_name'],
+      phone: json['phone'] ?? '',
+      address: json['address'] ?? '',
+      businessHours: json['business_hours'] ?? '',
+      extendedBusinessHours: json['extended_business_hours'] ?? '',
     );
   }
 }

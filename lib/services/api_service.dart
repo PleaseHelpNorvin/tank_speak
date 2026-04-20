@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/gas_station.dart';
 import '../models/auth_response.dart';
+import '../models/me_response.dart';
 import '../models/paginated_response.dart';
 import '../models/invitation.dart';
 import 'mock_data.dart';
@@ -240,20 +241,17 @@ class ApiService {
     }
   }
 
-  Future<Map<String, dynamic>> getMe(String token) async {
+  Future<MeResponse> getMe() async {
     final url = Uri.parse("$baseUrl/me");
 
     final response = await http.get(
       url,
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": "Bearer $token",
-      },
+      headers: await _headers(auth: true),
     );
 
     if (response.statusCode == 200) {
-      return jsonDecode(response.body);
+      final data = jsonDecode(response.body);
+      return MeResponse.fromJson(data);
     }
 
     throw Exception("Failed to get user: ${response.body}");

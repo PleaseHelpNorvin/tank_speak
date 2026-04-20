@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tank_speak/screens/pages/invitations_screen.dart';
 import 'package:tank_speak/screens/pages/station_detail_screen.dart';
+import '../../models/me_response.dart';
 import 'create_gas_station_screen.dart';
 import 'profile_screen.dart';
 import '../../services/api_service.dart';
@@ -8,7 +9,9 @@ import '../../models/gas_station.dart';
 import '../../widgets/pagination_bar.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({super.key});
+  final MeResponse me;
+
+  const HomeScreen({super.key, required this.me});
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
@@ -124,7 +127,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const InvitationsScreen(),
+                  builder: (_) => InvitationsScreen(me: widget.me),
                 ),
               );
             },
@@ -135,7 +138,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => const ProfileScreen(),
+                  builder: (_) =>  ProfileScreen(me: widget.me,),
                 ),
               );
             },
@@ -150,7 +153,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const CreateGasStationScreen(),
+              builder: (_) => CreateGasStationScreen(me: widget.me),
             ),
           );
         },
@@ -204,7 +207,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       // TODO: enable later
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => StationDetailScreen(stationId: station.id),
+                          builder: (context) => StationDetailScreen(station: station),
                         ),
                       );
                     },

@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:tank_speak/models/me_response.dart';
+import 'package:tank_speak/screens/pages/splash_screen.dart';
 import '../pages/profile_screen.dart';
 import '../pages/home_screen.dart';
 import '../../services/api_service.dart';
 
 class CreateGasStationScreen extends StatefulWidget {
-  const CreateGasStationScreen({super.key});
+  final MeResponse me;
+  const CreateGasStationScreen({super.key, required this.me});
 
   @override
   State<CreateGasStationScreen> createState() =>
@@ -15,7 +18,6 @@ class _CreateGasStationScreenState extends State<CreateGasStationScreen> {
   final _formKey = GlobalKey<FormState>();
   final ApiService api = ApiService();
 
-  // ✅ API REQUIRED FIELDS ONLY
   final name = TextEditingController();
   final address = TextEditingController();
   final businessHours = TextEditingController();
@@ -46,9 +48,11 @@ class _CreateGasStationScreenState extends State<CreateGasStationScreen> {
         const SnackBar(content: Text("Gas Station Created!")),
       );
 
+      if (!mounted) return;
+
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (_) => const HomeScreen()),
+        MaterialPageRoute(builder: (_) => const SplashScreen()),
             (route) => false,
       );
     } catch (e) {
@@ -118,7 +122,7 @@ class _CreateGasStationScreenState extends State<CreateGasStationScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                MaterialPageRoute(builder: (_) =>  ProfileScreen(me: widget.me)),
               );
             },
           ),

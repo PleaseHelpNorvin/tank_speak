@@ -32,20 +32,24 @@ class GasStation {
 
 class StationDetailResponse {
   final GasStation station;
-  final Map<String, dynamic> manager;
-  final Map<String, dynamic> owner;
+  final Map<String, dynamic>? manager;
+  final Map<String, dynamic>? owner;
 
   StationDetailResponse({
     required this.station,
-    required this.manager,
-    required this.owner,
+    this.manager,
+    this.owner,
   });
 
   factory StationDetailResponse.fromJson(Map<String, dynamic> json) {
     return StationDetailResponse(
       station: GasStation.fromJson(json['station']),
-      manager: json['manager'],
-      owner: json['owner'],
+      manager: json['manager'] != null
+          ? Map<String, dynamic>.from(json['manager'])
+          : null,
+      owner: json['owner'] != null
+          ? Map<String, dynamic>.from(json['owner'])
+          : null,
     );
   }
 }

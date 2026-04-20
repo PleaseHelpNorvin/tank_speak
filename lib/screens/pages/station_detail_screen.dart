@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:tank_speak/screens/pages/add_device_screen.dart';
 import '../../models/tank.dart';
 import '../../services/api_service.dart';
 import '../../models/invitation.dart';
 import '../../models/gas_station.dart';
 
 class StationDetailScreen extends StatefulWidget {
-  final int stationId;
+  final GasStation station;
 
-  const StationDetailScreen({super.key, required this.stationId});
+  const StationDetailScreen({super.key, required this.station});
 
   @override
   State<StationDetailScreen> createState() => _StationDetailScreenState();
@@ -91,7 +92,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     try {
       final result = useMock
           ? getMockStation()
-          : await api.getStationById(widget.stationId);
+          : await api.getStationById(widget.station.id);
 
       setState(() {
         station = result;
@@ -143,8 +144,8 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       );
     }
 
-    final data = station!;
-    final devices = data.station.tanks;
+    final data = station;
+    final devices = station?.station.tanks ?? [];
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F2027),
@@ -153,6 +154,19 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         title: Text(data!.station.name),
         backgroundColor: const Color(0xFF0F2027),
         foregroundColor: Colors.white,
+      ),
+
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.orange,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AddDeviceScreen(station: station!.station, devices: devices,maxDevicesPerStation: 6),
+            ),
+          );
+        },
+        child: const Icon(Icons.add),
       ),
 
       body: Padding(
@@ -438,10 +452,10 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
 
             if (showManager)
               section("MANAGER DETAILS", [
-                infoBox(" ${manager["name"]}", Icons.person),
-                infoBox(" ${manager["username"]}", Icons.badge),
-                infoBox(" ${manager["email"]}", Icons.email),
-                infoBox(" ${manager["invite_code"]}", Icons.key),
+                infoBox(" ${manager?["name"] ?? "N/A"}", Icons.person),
+                infoBox(" ${manager?["username"] ?? "N/A"}", Icons.badge),
+                infoBox(" ${manager?["email"] ?? "N/A"}", Icons.email),
+                infoBox(" ${manager?["invite_code"] ?? "N/A"}", Icons.key),
               ]),
 
 
@@ -453,10 +467,10 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
 
             if (showOwner)
               section("OWNER DETAILS", [
-                infoBox(" ${owner["name"]}", Icons.verified_user),
-                infoBox(" ${owner["username"]}", Icons.person_outline),
-                infoBox(" ${owner["email"]}", Icons.alternate_email),
-                infoBox(" ${owner["invite_code"]}", Icons.key),
+                infoBox(" ${owner?["name"] ?? "N/A"}", Icons.verified_user),
+                infoBox(" ${owner?["username"] ?? "N/A"}", Icons.person_outline),
+                infoBox(" ${owner?["email"] ?? "N/A"}", Icons.alternate_email),
+                infoBox(" ${owner?["invite_code"] ?? "N/A"}", Icons.key),
               ]),
           ],
         );

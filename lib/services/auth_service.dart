@@ -1,4 +1,5 @@
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/me_response.dart';
 import '../services/api_service.dart';
 import '../models/auth_response.dart';
 
@@ -22,7 +23,7 @@ class AuthService {
     token = response.token;
     type = response.type;
     isLoggedIn = true;
-
+    print("login token: $token");
     await saveToken(token!);
 
     return response;
@@ -63,11 +64,9 @@ class AuthService {
     );
   }
 
-  Future<Map<String, dynamic>> getMe() async {
-    final token = await getToken();
+  Future<MeResponse> getMe() async {
 
-    final response = await _apiService.getMe(token!);
-
+    final response = await _apiService.getMe();
     return response;
   }
 

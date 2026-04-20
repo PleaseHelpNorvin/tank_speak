@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:tank_speak/models/me_response.dart';
+import 'package:tank_speak/screens/pages/splash_screen.dart';
 import '../../models/invitation.dart';
 import '../../services/api_service.dart';
 
 
 class InvitationsScreen extends StatefulWidget {
-  const InvitationsScreen({super.key});
+  final MeResponse me;
+  const InvitationsScreen({super.key, required this.me});
 
   @override
   State<InvitationsScreen> createState() => _InvitationsScreenState();
@@ -39,11 +42,27 @@ class _InvitationsScreenState extends State<InvitationsScreen> {
   Future<void> acceptInvite(int id) async {
     await api.acceptInvitation(id);
     loadInvitations();
+
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const SplashScreen()),
+          (route) => false,
+    );
   }
 
   Future<void> declineInvite(int id) async {
     await api.deleteInvitation(id);
     loadInvitations();
+
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (_) => const SplashScreen()),
+          (route) => false,
+    );
   }
 
   @override
