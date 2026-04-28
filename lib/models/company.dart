@@ -1,3 +1,5 @@
+import 'gas_station.dart';
+
 class Company {
   final int? id;
   final String name;
@@ -35,6 +37,27 @@ class Company {
       "business_hours": businessHours,
       "ex_business_hour": extendedBusinessHours,
     };
+  }
+}
+
+class CompanyDetailResponse {
+  final Company company;
+  final List<GasStation> stations;
+
+
+  CompanyDetailResponse({
+    required this.company,
+    required this.stations,
+  });
+
+
+  factory CompanyDetailResponse.fromJson(Map<String, dynamic> json) {
+    return CompanyDetailResponse(
+      company: Company.fromJson(json['company']),
+      stations: (json['stations'] as List<dynamic>? ?? [])
+          .map((e) => GasStation.fromJson(e))
+          .toList(),
+    );
   }
 }
 

@@ -90,7 +90,21 @@ class ApiService {
   }
 
 
+  Future<CompanyDetailResponse> getCompanyById(int id) async {
+    final url = Uri.parse("$baseUrl/company/$id");
 
+    final response = await http.get(
+      url,
+      headers: await _headers(auth: true),
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+      return CompanyDetailResponse.fromJson(body);
+    }
+
+    throw Exception("Failed to fetch company: ${response.body}");
+  }
 
   // =========================
   // STATIONS

@@ -191,6 +191,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 itemBuilder: (context, index) {
                   final company = companies[index];
                   final status = "normal"; // temporary
+                  final id = company.id;
 
                   return Material(
                     color: Colors.transparent,
@@ -202,7 +203,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         Navigator.of(context).push(
                           MaterialPageRoute(
                             builder: (context) =>
-                                CreateCompanyScreen(me: widget.me),
+                                CompanyDetailScreen(companyId:id! , me: widget.me),
                           ),
                         );
                       },
