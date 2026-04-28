@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../models/company.dart';
 import '../models/gas_station.dart';
 import '../models/auth_response.dart';
 import '../models/me_response.dart';
@@ -10,7 +11,7 @@ import '../models/invitation.dart';
 import 'mock_data.dart';
 
 class ApiService {
-  static const String baseUrl = "http://159.89.230.35/api";
+  static const String baseUrl = "http://192.168.1.45:3123/api";
 
   // =========================
   // 🔐 HEADERS (CORE FIX)
@@ -35,8 +36,64 @@ class ApiService {
   //   return MockData.getStations();
   // }
 
+  Future<CreateCompanyResponse> createCompany({
+    required String name,
+    required String address,
+    required String phone,
+    required String businessHours,
+    required String extendedBusinessHours,
+  }) async {
+    final url = Uri.parse("$baseUrl/company/c/create");
+
+    final response = await http.post(
+      url,
+      headers: await _headers(auth: true),
+      body: jsonEncode({
+        "name": name,
+        "address": address,
+        "phone": phone,
+        "business_hours": businessHours,
+        "ex_business_hour": extendedBusinessHours,
+      }),
+    );
+
+
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      return CreateCompanyResponse.fromJson(
+        jsonDecode(response.body),
+      );
+    }
+
+    throw Exception("Failed to create company: ${response.body}");
+  }
+
+
+  Future<PaginatedResponse<Company>> fetchCompanies({int page = 1}) async {
+    final url = Uri.parse("$baseUrl/companies?page=$page&size=10");
+
+    final response = await http.get(
+      url,
+      headers: await _headers(auth: true),
+    );
+
+    if (response.statusCode == 200) {
+      final body = jsonDecode(response.body);
+
+      return PaginatedResponse<Company>.fromJson(
+        body,
+            (e) => Company.fromJson(e),
+        "companies",
+      );
+    }
+
+    throw Exception("Failed to fetch companies: ${response.body}");
+  }
+
+
+
+
   // =========================
-  // ⛽ STATIONS
+  // STATIONS
   // =========================
 
   Future<CreateGasStationResponse> createGasStation(

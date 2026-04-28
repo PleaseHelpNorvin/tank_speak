@@ -1,7 +1,9 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../services/ble_provision_service.dart';
-import 'dart:async';
 
 class BleProvisionScreen extends StatefulWidget {
   const BleProvisionScreen({super.key});
@@ -11,19 +13,15 @@ class BleProvisionScreen extends StatefulWidget {
 }
 
 class _BleProvisionScreenState extends State<BleProvisionScreen> {
-  final BleProvisionService ble = BleProvisionService();
-
   List<ScanResult> devices = [];
   StreamSubscription<List<ScanResult>>? scanSub;
-  StreamSubscription<bool>? statusSub;
-  StreamSubscription<String>? deviceSub;
 
-  bool sheetStatus = false;
-  String connectedDeviceInfo = "";
   bool isScanning = false;
-  String status = "";
+  String status = "Idle";
 
-  /// ---------------- SCAN ----------------
+  final BleProvisionService ble = BleProvisionService();
+
+  // ---------------- SCAN ----------------
   Future<void> scan() async {
     setState(() {
       isScanning = true;
@@ -51,14 +49,37 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
     });
   }
 
-  /// ---------------- DEVICE TAP -> BOTTOM SHEET ----------------
+  // ---------------- CONNECT ----------------
+  Future<void> connectAndOpenSheet(ScanResult device) async {
+    setState(() => status = "Connecting...");
+
+    final connected = await ble.connect(device);
+
+    if (!mounted) return;
+
+    if (!connected) {
+      setState(() => status = "Connection failed");
+      return;
+    }
+
+    setState(() => status = "Connected");
+
+    openDeviceSheet(device);
+  }
+
+  // ---------------- BOTTOM SHEET ----------------
   void openDeviceSheet(ScanResult device) {
     final ssidController = TextEditingController();
     final passController = TextEditingController();
 
-    bool connecting = false;
     bool provisioning = false;
+    bool provisioningSuccess = false;
+
     String sheetStatus = "";
+    String savedMac = "";
+    String debugLog = ""; // 👈 ADD THIS
+
+    StreamSubscription? statusSub;
 
     showModalBottomSheet(
       context: context,
@@ -70,6 +91,13 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
+            void log(String msg) {
+              print(msg);
+              setModalState(() {
+                debugLog = "$msg\n$debugLog";
+              });
+            }
+
             return Padding(
               padding: EdgeInsets.only(
                 left: 16,
@@ -81,51 +109,45 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
 
-                  /// DEVICE HEADER
                   Text(
-                    device.device.name.isEmpty
+                    device.device.platformName.isEmpty
                         ? "Unknown Device"
-                        : device.device.name,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                        : device.device.platformName,
+                    style: const TextStyle(color: Colors.white),
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // 👇 SHOW MAC
+                  if (savedMac.isNotEmpty)
+                    Text(
+                      "Saved Device MAC: $savedMac",
+                      style: const TextStyle(
+                        color: Colors.greenAccent,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+
+                  const SizedBox(height: 10),
+
+                  // 👇 DEBUG PANEL (VERY IMPORTANT)
+                  Container(
+                    height: 120,
+                    padding: const EdgeInsets.all(8),
+                    color: Colors.black,
+                    child: SingleChildScrollView(
+                      child: Text(
+                        debugLog,
+                        style: const TextStyle(
+                          color: Colors.greenAccent,
+                          fontSize: 12,
+                        ),
+                      ),
                     ),
                   ),
 
-                  Text(
-                    device.device.remoteId.str,
-                    style: const TextStyle(color: Colors.white54),
-                  ),
+                  const SizedBox(height: 10),
 
-                  const SizedBox(height: 16),
-
-                  /// CONNECT BUTTON
-                  ElevatedButton(
-                    onPressed: connecting
-                        ? null
-                        : () async {
-                      setModalState(() => connecting = true);
-
-                      try {
-                        await ble.connect(device);
-                        setModalState(() {
-                          sheetStatus = "Connected ";
-                        });
-                      } catch (e) {
-                        setModalState(() {
-                          sheetStatus = "Connection failed  $e";
-                        });
-                      }
-
-                      setModalState(() => connecting = false);
-                    },
-                    child: Text(connecting ? "Connecting..." : "Connect"),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  /// WIFI FIELDS
                   TextField(
                     controller: ssidController,
                     style: const TextStyle(color: Colors.white),
@@ -138,16 +160,15 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
                   TextField(
                     controller: passController,
                     style: const TextStyle(color: Colors.white),
+                    obscureText: true,
                     decoration: const InputDecoration(
                       labelText: "Password",
                       labelStyle: TextStyle(color: Colors.white70),
                     ),
-                    obscureText: true,
                   ),
 
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 20),
 
-                  /// PROVISION BUTTON
                   ElevatedButton(
                     onPressed: provisioning
                         ? null
@@ -155,22 +176,63 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
                       setModalState(() => provisioning = true);
 
                       try {
-                        await ble.sendSsid(ssidController.text);
-                        await ble.sendPassword(passController.text);
+                        log("Starting provisioning...");
 
-                        // ❌ cancel old listener if exists
                         await statusSub?.cancel();
 
-                        // ✅ listen LIVE status from ESP32
-                        statusSub = ble.listenStatus().listen((isConnected) {
-                          setModalState(() {
-                            sheetStatus = isConnected ? "Connected" : "Disconnected";
-                          });
-                        });
+                        statusSub = ble.listenStatus().listen(
+                              (isConnected) async {
+                            log("STATUS EVENT: $isConnected");
 
+                            setModalState(() {
+                              sheetStatus = isConnected
+                                  ? "Connected"
+                                  : "Not Connected";
+                            });
 
+                            if (isConnected && !provisioningSuccess) {
+                              provisioningSuccess = true;
 
+                              log("Reading MAC...");
+
+                              try {
+                                await Future.delayed(
+                                    const Duration(milliseconds: 300));
+
+                                final mac =
+                                await ble.readDeviceMac();
+
+                                log("MAC READ: $mac");
+
+                                final prefs =
+                                await SharedPreferences.getInstance();
+
+                                await prefs.setString("device_mac", mac);
+
+                                setModalState(() {
+                                  savedMac = mac;
+                                  sheetStatus = "Saved MAC: $mac";
+                                });
+
+                                Future.delayed(
+                                  const Duration(seconds: 1),
+                                      () => Navigator.pop(context),
+                                );
+                              } catch (e) {
+                                log("MAC ERROR: $e");
+                              }
+                            }
+                          },
+                        );
+
+                        log("Sending SSID...");
+                        await ble.sendSsid(ssidController.text);
+
+                        log("Sending PASS...");
+                        await ble.sendPassword(passController.text);
                       } catch (e) {
+                        log("ERROR: $e");
+
                         setModalState(() {
                           sheetStatus = "Error: $e";
                         });
@@ -193,13 +255,20 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
           },
         );
       },
-    );
+    ).whenComplete(() async {
+      await statusSub?.cancel();
+
+      if (!provisioningSuccess) {
+        await ble.disconnect();
+        setState(() => status = "Disconnected");
+      }
+    });
   }
 
   @override
   void dispose() {
     scanSub?.cancel();
-    statusSub?.cancel();
+    ble.disconnect();
     super.dispose();
   }
 
@@ -217,7 +286,6 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
       body: Column(
         children: [
 
-          /// SCAN BUTTON
           Padding(
             padding: const EdgeInsets.all(12),
             child: ElevatedButton(
@@ -226,12 +294,10 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
             ),
           ),
 
-          /// STATUS
           Text(status, style: const TextStyle(color: Colors.white70)),
 
           const SizedBox(height: 10),
 
-          /// DEVICE LIST
           Expanded(
             child: ListView.builder(
               itemCount: devices.length,
@@ -240,18 +306,20 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
 
                 return Card(
                   color: const Color(0xFF1B2B34),
-                  margin:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  margin: const EdgeInsets.symmetric(
+                      horizontal: 12, vertical: 6),
                   child: ListTile(
                     title: Text(
-                      d.device.name.isEmpty ? "Unknown" : d.device.name,
+                      d.device.name.isEmpty
+                          ? "Unknown"
+                          : d.device.name,
                       style: const TextStyle(color: Colors.white),
                     ),
                     subtitle: Text(
                       d.device.remoteId.str,
                       style: const TextStyle(color: Colors.white54),
                     ),
-                    onTap: () => openDeviceSheet(d),
+                    onTap: () => connectAndOpenSheet(d),
                   ),
                 );
               },

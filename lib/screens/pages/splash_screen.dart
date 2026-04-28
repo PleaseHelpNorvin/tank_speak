@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../services/api_service.dart';
 import '../../services/auth_service.dart';
 
+import 'create_company_screen.dart';
 import 'home_screen.dart';
 import 'create_gas_station_screen.dart';
 import 'invitations_screen.dart';
@@ -36,17 +37,17 @@ class _SplashScreenState extends State<SplashScreen> {
       final me = await auth.getMe();
       print("ME OK");
 
-      final stationResponse = await api.fetchStations();
-      print("STATIONS OK");
+      final companiesResponse = await api.fetchCompanies();
+      print("COMPANIES OK");
 
       final inviteResponse = await api.fetchInvitations();
       print("INVITES OK");
 
-      final stations = stationResponse.items;
+      final companies = companiesResponse.items;
       final invites = inviteResponse.items;
 
       // 1. Already has station → go app
-      if (stations.isNotEmpty) {
+      if (companies.isNotEmpty) {
         goTo( HomeScreen(me:me));
         return;
       }
@@ -58,7 +59,7 @@ class _SplashScreenState extends State<SplashScreen> {
       }
 
       // 3. New user → create station
-      goTo(CreateGasStationScreen(me: me));
+      goTo(CreateCompanyScreen(me: me));
     } catch (e, stack) {
       print("ERROR: $e");
       print("STACK TRACE: $stack");

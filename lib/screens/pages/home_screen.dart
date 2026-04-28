@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:tank_speak/screens/pages/create_company_screen.dart';
 import 'package:tank_speak/screens/pages/invitations_screen.dart';
 import 'package:tank_speak/screens/pages/station_detail_screen.dart';
 import '../../models/me_response.dart';
+import 'company_detail_screen.dart';
 import 'create_gas_station_screen.dart';
 import 'profile_screen.dart';
 import '../../services/api_service.dart';
-import '../../models/gas_station.dart';
+import '../../models/company.dart';
 import '../../widgets/pagination_bar.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -20,7 +22,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   final ApiService api = ApiService();
 
-  List<GasStation> stations = [];
+  List<Company> companies = [];
   bool isLoading = true;
 
   int currentPage = 1;
@@ -39,10 +41,10 @@ class _HomeScreenState extends State<HomeScreen> {
     });
 
     try {
-      final response = await api.fetchStations(page: page);
+      final response = await api.fetchCompanies(page: page);
 
       setState(() {
-        stations = response.items;
+        companies = response.items;
         currentPage = response.page;
         total = response.total;
       });
@@ -116,7 +118,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
       // ================= APP BAR =================
       appBar: AppBar(
-        title: const Text("Gas Stations"),
+        title: const Text("Companies"),
         backgroundColor: const Color(0xFF0F2027),
         foregroundColor: Colors.white,
         automaticallyImplyLeading: false,
@@ -138,7 +140,7 @@ class _HomeScreenState extends State<HomeScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) =>  ProfileScreen(me: widget.me,),
+                  builder: (_) => ProfileScreen(me: widget.me),
                 ),
               );
             },
@@ -153,7 +155,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => CreateGasStationScreen(me: widget.me),
+              builder: (_) => CreateCompanyScreen(me: widget.me),
             ),
           );
         },
@@ -178,150 +180,152 @@ class _HomeScreenState extends State<HomeScreen> {
 
           // ================= LIST =================
           Expanded(
-          child: RefreshIndicator(
-          color: Colors.orange,
-            onRefresh: () async {
-            await loadData(page: currentPage);
-            },
-            child: ListView.builder(
-              padding: const EdgeInsets.all(16),
-              itemCount: stations.length,
-              itemBuilder: (context, index) {
-                final station = stations[index];
-                final status = "normal"; // temporary
+            child: RefreshIndicator(
+              color: Colors.orange,
+              onRefresh: () async {
+                await loadData(page: currentPage);
+              },
+              child: ListView.builder(
+                padding: const EdgeInsets.all(16),
+                itemCount: companies.length,
+                itemBuilder: (context, index) {
+                  final company = companies[index];
+                  final status = "normal"; // temporary
 
-                return Material(
-                  color: Colors.transparent,
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(18),
-                    splashColor: Colors.transparent,
-                    highlightColor: Colors.transparent,
-                    onTap: () {
-                      // ScaffoldMessenger.of(context).showSnackBar(
-                      //   const SnackBar(
-                      //     content: Text("Tapped! Navigation not ready yet."),
-                      //     duration: Duration(milliseconds: 800),
-                      //   ),
-                      // );
-
-                      // TODO: enable later
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (context) => StationDetailScreen(station: station),
+                  return Material(
+                    color: Colors.transparent,
+                    child: InkWell(
+                      borderRadius: BorderRadius.circular(18),
+                      splashColor: Colors.transparent,
+                      highlightColor: Colors.transparent,
+                      onTap: () {
+                        Navigator.of(context).push(
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                CreateCompanyScreen(me: widget.me),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 16),
+                        padding: const EdgeInsets.all(18),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.08),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(
+                            color: getStatusColor(status).withOpacity(0.5),
+                          ),
                         ),
-                      );
-                    },
-                    child: Container(
-                      margin: const EdgeInsets.only(bottom: 16),
-                      padding: const EdgeInsets.all(18),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.08),
-                        borderRadius: BorderRadius.circular(18),
-                        border: Border.all(
-                          color: getStatusColor(status).withOpacity(0.5),
-                        ),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // HEADER
-                          Row(
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(12),
-                                decoration: BoxDecoration(
-                                  color: getStatusColor(status)
-                                      .withOpacity(0.15),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: const Icon(
-                                  Icons.local_gas_station,
-                                  color: Colors.white,
-                                  size: 20,
-                                ),
-                              ),
-
-                              const SizedBox(width: 12),
-
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      station.name,
-                                      style: const TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      station.address,
-                                      style: TextStyle(
-                                        color:
-                                        Colors.white.withOpacity(0.6),
-                                        fontSize: 12,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 6,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: getStatusColor(status)
-                                      .withOpacity(0.2),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  status.toUpperCase(),
-                                  style: TextStyle(
-                                    color: getStatusColor(status),
-                                    fontSize: 10,
-                                    fontWeight: FontWeight.bold,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // HEADER
+                            Row(
+                              children: [
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: getStatusColor(status)
+                                        .withOpacity(0.15),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.apartment,
+                                    color: Colors.white,
+                                    size: 20,
                                   ),
                                 ),
-                              ),
-                            ],
-                          ),
 
-                          const SizedBox(height: 15),
+                                const SizedBox(width: 12),
 
-                          Container(
-                            height: 1,
-                            color: Colors.white.withOpacity(0.1),
-                          ),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        company.name,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        company.address,
+                                        style: TextStyle(
+                                          color: Colors.white
+                                              .withOpacity(0.6),
+                                          fontSize: 12,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
 
-                          const SizedBox(height: 15),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: getStatusColor(status)
+                                        .withOpacity(0.2),
+                                    borderRadius:
+                                    BorderRadius.circular(12),
+                                  ),
+                                  child: Text(
+                                    status.toUpperCase(),
+                                    style: TextStyle(
+                                      color: getStatusColor(status),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
 
-                          // INFO ROW
-                          Row(
-                            mainAxisAlignment:
-                            MainAxisAlignment.spaceBetween,
-                            children: [
-                              _infoBox("Manager", station.name,
-                                  Icons.person),
-                              _infoBox("Contact", station.phone,
-                                  Icons.phone),
-                              _infoBox("Hours",
-                                  station.businessHours,
-                                  Icons.access_time),
-                            ],
-                          ),
-                        ],
+                            const SizedBox(height: 15),
+
+                            Container(
+                              height: 1,
+                              color: Colors.white.withOpacity(0.1),
+                            ),
+
+                            const SizedBox(height: 15),
+
+                            // INFO ROW
+                            Row(
+                              mainAxisAlignment:
+                              MainAxisAlignment.spaceBetween,
+                              children: [
+                                _infoBox(
+                                  "Manager",
+                                  company.name,
+                                  Icons.person,
+                                ),
+                                _infoBox(
+                                  "Contact",
+                                  company.phone,
+                                  Icons.phone,
+                                ),
+                                _infoBox(
+                                  "Hours",
+                                  company.businessHours,
+                                  Icons.access_time,
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                );
-              },
+                  );
+                },
+              ),
             ),
-          ),
           ),
         ],
       ),

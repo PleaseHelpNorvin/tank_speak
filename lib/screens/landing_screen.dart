@@ -1,10 +1,60 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+
 import 'auth/login_screen.dart';
-import 'auth/register_screen.dart';
 import 'pages/ble_provision_screen.dart';
 
-class LandingScreen extends StatelessWidget {
+class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
+
+  @override
+  State<LandingScreen> createState() => _LandingScreenState();
+}
+
+class _LandingScreenState extends State<LandingScreen> {
+
+  @override
+  void initState() {
+    super.initState();
+    checkBluetooth();
+  }
+
+  /// 🔥 CHECK BLUETOOTH ON APP OPEN
+  void checkBluetooth() async {
+    final state = await FlutterBluePlus.adapterState.first;
+
+    if (state != BluetoothAdapterState.on) {
+      if (!mounted) return;
+
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => AlertDialog(
+          title: const Text("Bluetooth Required"),
+          content: const Text(
+            "Please turn on Bluetooth to use BLE Provision feature.",
+          ),
+          actions: [
+            TextButton(
+              onPressed: () async {
+                Navigator.pop(context);
+
+                /// Android only
+                await FlutterBluePlus.turnOn();
+              },
+              child: const Text("Turn On"),
+            ),
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text("Cancel"),
+            ),
+          ],
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,6 +79,7 @@ class LandingScreen extends StatelessWidget {
               children: [
                 const Spacer(),
 
+                /// 🔥 ICON
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -44,7 +95,7 @@ class LandingScreen extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
-                // 🔥 TITLE
+                /// 🔥 TITLE
                 const Text(
                   "TankSpeak",
                   style: TextStyle(
@@ -57,6 +108,7 @@ class LandingScreen extends StatelessWidget {
 
                 const SizedBox(height: 10),
 
+                /// 🔥 SUBTITLE
                 const Text(
                   "Monitor your fuel tanks easily",
                   style: TextStyle(
@@ -67,7 +119,7 @@ class LandingScreen extends StatelessWidget {
 
                 const Spacer(),
 
-                // 🔥 LOGIN BUTTON
+                /// 🔥 LOGIN BUTTON
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -85,15 +137,17 @@ class LandingScreen extends StatelessWidget {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (_) => LoginScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => LoginScreen(),
+                        ),
                       );
                     },
                   ),
                 ),
 
+                const SizedBox(height: 10),
 
-                const SizedBox(height: 30),
-
+                /// 🔥 BLE BUTTON
                 SizedBox(
                   width: double.infinity,
                   child: ElevatedButton(
@@ -118,6 +172,8 @@ class LandingScreen extends StatelessWidget {
                     },
                   ),
                 ),
+
+                const SizedBox(height: 30),
               ],
             ),
           ),
