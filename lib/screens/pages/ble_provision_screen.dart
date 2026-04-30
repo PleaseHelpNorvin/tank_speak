@@ -1,12 +1,16 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
+import 'package:tank_speak/models/gas_station.dart';
 import '../../services/ble_provision_service.dart';
+import '../../services/api_service.dart';
 
 class BleProvisionScreen extends StatefulWidget {
-  const BleProvisionScreen({super.key});
+  final GasStation station;
+
+  const BleProvisionScreen({super.key, required this.station});
 
   @override
   State<BleProvisionScreen> createState() => _BleProvisionScreenState();
@@ -19,9 +23,29 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
   bool isScanning = false;
   String status = "Idle";
 
+  String? savedMac; // 👈 IMPORTANT
+
   final BleProvisionService ble = BleProvisionService();
 
-  // ---------------- SCAN ----------------
+  // ================= INIT =================
+  @override
+  void initState() {
+    super.initState();
+    loadSavedMac();
+  }
+
+  Future<void> loadSavedMac() async {
+    final prefs = await SharedPreferences.getInstance();
+    final mac = prefs.getString("device_mac_${widget.station.id}");
+
+    if (!mounted) return;
+
+    setState(() {
+      savedMac = mac;
+    });
+  }
+
+  // ================= SCAN =================
   Future<void> scan() async {
     setState(() {
       isScanning = true;
@@ -49,7 +73,7 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
     });
   }
 
-  // ---------------- CONNECT ----------------
+  // ================= CONNECT =================
   Future<void> connectAndOpenSheet(ScanResult device) async {
     setState(() => status = "Connecting...");
 
@@ -67,7 +91,31 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
     openDeviceSheet(device);
   }
 
-  // ---------------- BOTTOM SHEET ----------------
+  // ================= REGISTER DEVICE =================
+  Future<void> registerDevice() async {
+    try {
+      setState(() => status = "Registering device...");
+
+      await ApiService().registerDevice(
+        deviceId: savedMac!,
+        stationId: widget.station.id,
+      );
+
+      setState(() => status = "Device Registered!");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Device registered successfully")),
+      );
+    } catch (e) {
+      setState(() => status = "Error: $e");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed: $e")),
+      );
+    }
+  }
+
+  // ================= BOTTOM SHEET =================
   void openDeviceSheet(ScanResult device) {
     final ssidController = TextEditingController();
     final passController = TextEditingController();
@@ -76,8 +124,7 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
     bool provisioningSuccess = false;
 
     String sheetStatus = "";
-    String savedMac = "";
-    String debugLog = ""; // 👈 ADD THIS
+    String debugLog = "";
 
     StreamSubscription? statusSub;
 
@@ -108,7 +155,6 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-
                   Text(
                     device.device.platformName.isEmpty
                         ? "Unknown Device"
@@ -118,19 +164,6 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
 
                   const SizedBox(height: 10),
 
-                  // 👇 SHOW MAC
-                  if (savedMac.isNotEmpty)
-                    Text(
-                      "Saved Device MAC: $savedMac",
-                      style: const TextStyle(
-                        color: Colors.greenAccent,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                  const SizedBox(height: 10),
-
-                  // 👇 DEBUG PANEL (VERY IMPORTANT)
                   Container(
                     height: 120,
                     padding: const EdgeInsets.all(8),
@@ -184,35 +217,22 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
                               (isConnected) async {
                             log("STATUS EVENT: $isConnected");
 
-                            setModalState(() {
-                              sheetStatus = isConnected
-                                  ? "Connected"
-                                  : "Not Connected";
-                            });
-
                             if (isConnected && !provisioningSuccess) {
                               provisioningSuccess = true;
 
-                              log("Reading MAC...");
-
                               try {
-                                await Future.delayed(
-                                    const Duration(milliseconds: 300));
-
                                 final mac =
                                 await ble.readDeviceMac();
-
-                                log("MAC READ: $mac");
 
                                 final prefs =
                                 await SharedPreferences.getInstance();
 
-                                await prefs.setString("device_mac", mac);
+                                await prefs.setString(
+                                  "device_mac_${widget.station.id}",
+                                  mac,
+                                );
 
-                                setModalState(() {
-                                  savedMac = mac;
-                                  sheetStatus = "Saved MAC: $mac";
-                                });
+                                log("MAC SAVED: $mac");
 
                                 Future.delayed(
                                   const Duration(seconds: 1),
@@ -225,17 +245,10 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
                           },
                         );
 
-                        log("Sending SSID...");
                         await ble.sendSsid(ssidController.text);
-
-                        log("Sending PASS...");
                         await ble.sendPassword(passController.text);
                       } catch (e) {
                         log("ERROR: $e");
-
-                        setModalState(() {
-                          sheetStatus = "Error: $e";
-                        });
                       }
 
                       setModalState(() => provisioning = false);
@@ -262,6 +275,8 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
         await ble.disconnect();
         setState(() => status = "Disconnected");
       }
+
+      await loadSavedMac(); // 👈 refresh UI
     });
   }
 
@@ -272,6 +287,7 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
     super.dispose();
   }
 
+  // ================= UI =================
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -285,6 +301,32 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
 
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    savedMac == null
+                        ? "Selected Device ID: None"
+                        : "Selected Device ID: $savedMac",
+                    style: const TextStyle(color: Colors.white70),
+                  ),
+                ),
+
+                ElevatedButton(
+                  onPressed: savedMac == null ? null : registerDevice,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange,
+                  ),
+                  child: const Text(
+                    "Register",
+                    style: TextStyle(color: Colors.black),
+                  ),
+                ),
+              ],
+            ),
+          ),
 
           Padding(
             padding: const EdgeInsets.all(12),

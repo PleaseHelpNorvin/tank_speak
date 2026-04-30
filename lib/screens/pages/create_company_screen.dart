@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:tank_speak/screens/pages/splash_screen.dart';
 import '../../services/api_service.dart';
 import '../../models/me_response.dart';
 
@@ -30,13 +31,13 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
     setState(() => isLoading = true);
 
     try {
-      final response = await api.createCompany(
-        name: nameController.text.trim(),
-        address: addressController.text.trim(),
-        phone: phoneController.text.trim(),
-        businessHours: businessHoursController.text.trim(),
-        extendedBusinessHours: extendedHoursController.text.trim(),
-      );
+      final response = await api.createCompany({
+        "name": nameController.text.trim(),
+        "address": addressController.text.trim(),
+        "phone": phoneController.text.trim(),
+        "business_hours": businessHoursController.text.trim(),
+        "ex_business_hour": extendedHoursController.text.trim(),
+      });
 
       if (!mounted) return;
 
@@ -44,7 +45,11 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
         SnackBar(content: Text(response.message)),
       );
 
-      Navigator.pop(context, true);
+      Navigator.pushAndRemoveUntil(
+        context,
+        MaterialPageRoute(builder: (_) => const SplashScreen()),
+            (route) => false,
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error: $e")),

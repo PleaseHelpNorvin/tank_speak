@@ -37,3 +37,20 @@ class Device {
     );
   }
 }
+
+class RegisterDeviceResponse {
+  final String message;
+  final Device device;
+
+  RegisterDeviceResponse({
+    required this.message,
+    required this.device,
+  });
+
+  factory RegisterDeviceResponse.fromJson(Map<String, dynamic> json) {
+    return RegisterDeviceResponse(
+      message: json['message'],
+      device: Device.fromJson(json['device']),
+    );
+  }
+}

@@ -163,12 +163,12 @@ class _LandingScreenState extends State<LandingScreen> {
                       style: TextStyle(fontSize: 16),
                     ),
                     onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const BleProvisionScreen(),
-                        ),
-                      );
+                      // Navigator.push(
+                      //   context,
+                      //   MaterialPageRoute(
+                      //     builder: (_) => const BleProvisionScreen(),
+                      //   ),
+                      // );
                     },
                   ),
                 ),

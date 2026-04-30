@@ -8,10 +8,11 @@ import '../models/auth_response.dart';
 import '../models/me_response.dart';
 import '../models/paginated_response.dart';
 import '../models/invitation.dart';
+import '../models/tank.dart';
 import 'mock_data.dart';
 
 class ApiService {
-  static const String baseUrl = "http://192.168.1.45:3123/api";
+  static const String baseUrl = "http://192.168.0.70:3123/api";
 
   // =========================
   // 🔐 HEADERS (CORE FIX)
@@ -36,27 +37,16 @@ class ApiService {
   //   return MockData.getStations();
   // }
 
-  Future<CreateCompanyResponse> createCompany({
-    required String name,
-    required String address,
-    required String phone,
-    required String businessHours,
-    required String extendedBusinessHours,
-  }) async {
-    final url = Uri.parse("$baseUrl/company/c/create");
+  Future<CreateCompanyResponse> createCompany(
+    Map<String, dynamic> data,
+  ) async {
+    final url = Uri.parse("$baseUrl/company/d/create");
 
     final response = await http.post(
       url,
       headers: await _headers(auth: true),
-      body: jsonEncode({
-        "name": name,
-        "address": address,
-        "phone": phone,
-        "business_hours": businessHours,
-        "ex_business_hour": extendedBusinessHours,
-      }),
+      body: jsonEncode(data),
     );
-
 
     if (response.statusCode == 200 || response.statusCode == 201) {
       return CreateCompanyResponse.fromJson(
@@ -91,7 +81,7 @@ class ApiService {
 
 
   Future<CompanyDetailResponse> getCompanyById(int id) async {
-    final url = Uri.parse("$baseUrl/company/$id");
+    final url = Uri.parse("$baseUrl/company/c/$id");
 
     final response = await http.get(
       url,
@@ -111,9 +101,12 @@ class ApiService {
   // =========================
 
   Future<CreateGasStationResponse> createGasStation(
+      int companyId,
       Map<String, dynamic> data,
       ) async {
-    final url = Uri.parse("$baseUrl/station/create");
+    final url = Uri.parse(
+      "$baseUrl/company/c/$companyId/station-create",
+    );
 
     final response = await http.post(
       url,
@@ -331,9 +324,9 @@ class ApiService {
   // =========================
   // 📟 DEVICE
   // =========================
-  Future<bool> registerDevice({
+  Future<RegisterDeviceResponse> registerDevice({
     required String deviceId,
-    required String ssid,
+    required int stationId,
   }) async {
     final url = Uri.parse("$baseUrl/device/register");
 
@@ -342,14 +335,15 @@ class ApiService {
       headers: await _headers(auth: true),
       body: jsonEncode({
         "device_id": deviceId,
-        "ssid": ssid,
+        "station_id": stationId,
       }),
     );
 
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return true;
+      return RegisterDeviceResponse.fromJson(
+        jsonDecode(response.body),
+      );
     }
 
     throw Exception("Failed to register device: ${response.body}");
   }
-}

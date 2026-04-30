@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:tank_speak/screens/pages/create_gas_station_screen.dart';
+import 'package:tank_speak/screens/pages/profile_screen.dart';
+import 'package:tank_speak/screens/pages/station_detail_screen.dart';
 import '../../models/company.dart';
 import '../../models/gas_station.dart';
 import '../../models/me_response.dart';
 import '../../services/api_service.dart';
+import 'ble_provision_screen.dart';
+import 'invitations_screen.dart';
 
 class CompanyDetailScreen extends StatefulWidget {
   final int companyId;
@@ -59,6 +64,43 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
         title: const Text("Company Details"),
         backgroundColor: const Color(0xFF0F2027),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.mail),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => InvitationsScreen(me: widget.me),
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => ProfileScreen(me: widget.me),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
+
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: Colors.orange,
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => CreateGasStationScreen(me: widget.me, companyId: widget.companyId,),
+            ),
+          );
+        },
+        child: const Icon(Icons.add),
       ),
 
       // ================= BODY =================
@@ -154,42 +196,79 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
               itemBuilder: (context, index) {
                 final station = stations[index];
 
-                return Container(
+                return Card(
+                  color: Colors.white.withOpacity(0.06),
                   margin: const EdgeInsets.only(bottom: 12),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.06),
+                  shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: Colors.white.withOpacity(0.1),
-                    ),
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        station.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
+                  child: ListTile(
+                    title: Text(
+                      station.name,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                    subtitle: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          station.address,
+                          style: TextStyle(color: Colors.white.withOpacity(0.6)),
                         ),
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        station.address,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.6),
+                        Text(
+                          station.phone,
+                          style: TextStyle(color: Colors.white.withOpacity(0.6)),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        station.phone,
-                        style: TextStyle(
-                          color: Colors.white.withOpacity(0.6),
+                      ],
+                    ),
+
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => StationDetailScreen(station: station),
                         ),
-                      ),
-                    ],
+                      );
+                    },
+
+
+                    // 👇 ACTION BUTTONS
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+
+                        // REGISTER DEVICE
+                        IconButton(
+                          icon: const Icon(Icons.devices, color: Colors.green),
+                          onPressed: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => BleProvisionScreen(station: station),
+                              ),
+                            );
+                            print("Register device ${station.id}");
+                          },
+                        ),
+
+                        // EDIT
+                        IconButton(
+                          icon: const Icon(Icons.edit, color: Colors.orange),
+                          onPressed: () {
+                            print("Edit ${station.id}");
+                          },
+                        ),
+
+                        // DELETE
+                        IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () {
+                            print("Delete ${station.id}");
+                          },
+                        ),
+
+
+                      ],
+                    ),
                   ),
                 );
               },

@@ -24,7 +24,7 @@ class Company {
       address: json['address'] ?? '',
       phone: json['phone'] ?? '',
       businessHours: json['business_hours'] ?? '',
-      extendedBusinessHours: json['ex_business_hour'] ?? '',
+      extendedBusinessHours: json['extended_business_hours'] ?? '',
     );
   }
 
@@ -75,12 +75,5 @@ class CreateCompanyResponse {
       message: json['message'] ?? '',
       company: Company.fromJson(json['company']),
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      "message": message,
-      "company": company.toJson(),
-    };
   }
 }

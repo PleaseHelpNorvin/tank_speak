@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:tank_speak/models/me_response.dart';
 import 'package:tank_speak/screens/pages/splash_screen.dart';
+import '../../models/company.dart';
 import '../pages/profile_screen.dart';
 import '../pages/home_screen.dart';
 import '../../services/api_service.dart';
 
 class CreateGasStationScreen extends StatefulWidget {
   final MeResponse me;
-  const CreateGasStationScreen({super.key, required this.me});
+  final int companyId;
+  const CreateGasStationScreen({super.key, required this.me, required this.companyId});
 
   @override
   State<CreateGasStationScreen> createState() =>
@@ -40,7 +42,7 @@ class _CreateGasStationScreenState extends State<CreateGasStationScreen> {
         "phone": phone.text,
       };
 
-      await api.createGasStation(data);
+      await api.createGasStation(widget.companyId,data);
 
       setState(() => isLoading = false);
 
@@ -113,7 +115,7 @@ class _CreateGasStationScreenState extends State<CreateGasStationScreen> {
       backgroundColor: const Color(0xFF0F2027),
 
       appBar: AppBar(
-        title: const Text("Create Gas Station"),
+        title: Text("Create Gas Station ${widget.companyId}"),
         backgroundColor: const Color(0xFF0F2027),
         foregroundColor: Colors.white,
         actions: [
