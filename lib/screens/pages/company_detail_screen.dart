@@ -225,7 +225,7 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) => StationDetailScreen(station: station),
+                          builder: (_) => StationDetailScreen(station: station, me: widget.me),
                         ),
                       );
                     },

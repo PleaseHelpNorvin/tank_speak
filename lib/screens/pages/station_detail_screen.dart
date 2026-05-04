@@ -1,15 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:tank_speak/screens/pages/add_device_screen.dart';
+import 'package:tank_speak/screens/pages/profile_screen.dart';
+import '../../models/me_response.dart';
 import '../../models/tank.dart';
 import '../../services/api_service.dart';
 import '../../models/invitation.dart';
 import '../../models/gas_station.dart';
 import 'ble_provision_screen.dart';
+import 'invitations_screen.dart';
 
 class StationDetailScreen extends StatefulWidget {
   final GasStation station;
+  final MeResponse me;
 
-  const StationDetailScreen({super.key, required this.station});
+  const StationDetailScreen({super.key, required this.station, required this.me});
 
   @override
   State<StationDetailScreen> createState() => _StationDetailScreenState();
@@ -96,6 +100,27 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
           title: Text(widget.station.name),
           backgroundColor: const Color(0xFF0F2027),
           foregroundColor: Colors.white,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.email),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) =>  InvitationsScreen(me: widget.me)),
+                );
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.person),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) =>  ProfileScreen(me: widget.me)),
+                );
+              },
+            ),
+
+          ],
         ),
         body: Center(
           child: Text(
@@ -120,6 +145,27 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         title: Text(data!.station.name),
         backgroundColor: const Color(0xFF0F2027),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.email),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) =>  InvitationsScreen(me: widget.me)),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) =>  ProfileScreen(me: widget.me)),
+              );
+            },
+          ),
+
+        ],
       ),
 
       floatingActionButton: FloatingActionButton(
