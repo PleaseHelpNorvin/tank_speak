@@ -1,6 +1,9 @@
+import 'area_manager.dart';
+import 'owner.dart';
 import 'tank.dart';
 class GasStation {
   final int id;
+  final int companyId;
   final String name;
   final String address;
   final String phone;
@@ -9,6 +12,7 @@ class GasStation {
 
   GasStation({
     required this.id,
+    required this.companyId,
     required this.name,
     required this.address,
     required this.phone,
@@ -19,6 +23,7 @@ class GasStation {
   factory GasStation.fromJson(Map<String, dynamic> json) {
     return GasStation(
       id: json['id'],
+      companyId: json['company_id'],
       name: json['name'] ?? '',
       address: json['address'] ?? '',
       phone: json['phone'] ?? '',
@@ -32,28 +37,35 @@ class GasStation {
 
 class StationDetailResponse {
   final GasStation station;
-  final Map<String, dynamic>? manager;
-  final Map<String, dynamic>? owner;
+  final AreaManager? manager;
+  final Owner? owner;
+  final Device? norvi;
 
   StationDetailResponse({
     required this.station,
     this.manager,
     this.owner,
+    this.norvi,
   });
 
   factory StationDetailResponse.fromJson(Map<String, dynamic> json) {
     return StationDetailResponse(
       station: GasStation.fromJson(json['station']),
+
       manager: json['manager'] != null
-          ? Map<String, dynamic>.from(json['manager'])
+          ? AreaManager.fromJson(json['manager'])
           : null,
+
       owner: json['owner'] != null
-          ? Map<String, dynamic>.from(json['owner'])
+          ? Owner.fromJson(json['owner'])
+          : null,
+
+      norvi: json['norvi'] != null
+          ? Device.fromJson(json['norvi'])
           : null,
     );
   }
 }
-
 
 class CreateGasStationResponse {
   final String message;

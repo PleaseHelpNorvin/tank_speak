@@ -4,6 +4,7 @@ import '../../models/tank.dart';
 import '../../services/api_service.dart';
 import '../../models/invitation.dart';
 import '../../models/gas_station.dart';
+import 'ble_provision_screen.dart';
 
 class StationDetailScreen extends StatefulWidget {
   final GasStation station;
@@ -26,61 +27,9 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
   bool showManager = false;
   bool showOwner = false;
   bool showStationInfo = true;
+  bool showRegisteredDevice = false;
 
-  List<Map<String, dynamic>> getMockDevices() {
-    return List.generate(10, (index) {
-      return {
-        "id": index,
-        "name": "Device ${index + 1}",
-        "type": index % 3 == 0
-            ? "dispenser"
-            : index % 3 == 1
-            ? "flow_sensor"
-            : "unknown",
-        "isActive": index % 2 == 0,
-        "lastSeen": "2026-04-17 10:${index}0 AM",
-      };
-    });
-  }
 
-  StationDetailResponse getMockStation() {
-    return StationDetailResponse(
-      station: GasStation(
-        id: 12,
-        name: "Mock Station 1",
-        address: "Cebu City, Philippines",
-        phone: "09123456789",
-        businessHours: "8AM - 6PM",
-        tanks: getMockDevices().map((e) => Device(
-          id: e["id"].toString(),
-          stationId: 12,
-          name: e["name"],
-          deviceKey: "mock-key-${e["id"]}",
-          type: e["type"],
-          isActive: e["isActive"],
-          lastSeen: DateTime.tryParse(e["lastSeen"]),
-          createdAt: DateTime.now(),
-          updatedAt: DateTime.now(),
-        )).toList(),
-      ),
-
-      manager: {
-        "id": 2,
-        "name": "Mock Manager",
-        "username": "manager_mock",
-        "email": "manager@mock.com",
-        "invite_code": "123456",
-      },
-
-      owner: {
-        "id": 3,
-        "name": "Mock Owner",
-        "username": "owner_mock",
-        "email": "owner@mock.com",
-        "invite_code": "987654",
-      },
-    );
-  }
 
   @override
   void initState() {
@@ -90,9 +39,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
 
   Future<void> loadStation() async {
     try {
-      final result = useMock
-          ? getMockStation()
-          : await api.getStationById(widget.station.id);
+      final result =  await api.getStationById(widget.station.id);
 
       setState(() {
         station = result;
@@ -198,6 +145,33 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
               width: double.infinity,
               child: ElevatedButton.icon(
                 onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BleProvisionScreen(station: widget.station),
+                    ),
+                  );
+                  // _openInviteManagerSheet(context, data.station);
+                },
+                icon: const Icon(Icons.precision_manufacturing),
+                label: const Text("Register Norvi"),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.black,
+                  padding: const EdgeInsets.all(14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () {
                   _openInviteManagerSheet(context, data.station);
                 },
                 icon: const Icon(Icons.person_add),
@@ -216,7 +190,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
             const SizedBox(height: 20),
 
             Text(
-              "Devices (${devices.length})",
+              "Norvi Sensors (${devices.length})",
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 18,
@@ -340,11 +314,12 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     final station = data.station;
     final manager = data.manager;
     final owner = data.owner;
+    final norvi = data.norvi;
 
 
     Widget infoBox(String value, IconData icon) {
       return Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: Colors.white.withOpacity(0.05),
           borderRadius: BorderRadius.circular(10),
@@ -374,13 +349,17 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Title
           GridView.count(
             crossAxisCount: 2,
+            crossAxisSpacing: 5,
+            mainAxisSpacing: 5,
+            childAspectRatio: 3.5,
+
+            // 🔥 IMPORTANT FIXES
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisSpacing: 10,
-            mainAxisSpacing: 10,
-            childAspectRatio: 3.5,
+            padding: EdgeInsets.zero,
             children: children,
           ),
         ],
@@ -391,7 +370,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       return InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 0),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -425,17 +404,12 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
               }),
 
 
-            const SizedBox(height: 10),
+            const SizedBox(height: 5),
 
             if (showStationInfo)
-              GridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 10,
-                mainAxisSpacing: 10,
-                childAspectRatio: 3.5,
-                children: [
+              section(
+                "Station Info",
+                [
                   infoBox(" ${station.name}", Icons.local_gas_station),
                   infoBox(" ${station.phone}", Icons.phone),
                   infoBox(" ${station.address}", Icons.location_on),
@@ -448,14 +422,15 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
             toggleHeader("MANAGER", showManager, () {
               setState(() => showManager = !showManager);
             }),
-            const SizedBox(height: 10),
+            const SizedBox(height: 5),
 
             if (showManager)
               section("MANAGER DETAILS", [
-                infoBox(" ${manager?["name"] ?? "N/A"}", Icons.person),
-                infoBox(" ${manager?["username"] ?? "N/A"}", Icons.badge),
-                infoBox(" ${manager?["email"] ?? "N/A"}", Icons.email),
-                infoBox(" ${manager?["invite_code"] ?? "N/A"}", Icons.key),
+                infoBox(" ${manager?.name ?? "N/A"}", Icons.person),
+                infoBox(" ${manager?.username ?? "N/A"}", Icons.supervised_user_circle),
+                infoBox(" ${manager?.inviteCode ?? "N/A"}", Icons.code),
+                infoBox(" ${manager?.email ?? "N/A"}", Icons.email),
+
               ]),
 
 
@@ -463,14 +438,30 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
             toggleHeader("OWNER", showOwner, () {
               setState(() => showOwner = !showOwner);
             }),
-            const SizedBox(height: 10),
+            const SizedBox(height: 5),
 
             if (showOwner)
               section("OWNER DETAILS", [
-                infoBox(" ${owner?["name"] ?? "N/A"}", Icons.verified_user),
-                infoBox(" ${owner?["username"] ?? "N/A"}", Icons.person_outline),
-                infoBox(" ${owner?["email"] ?? "N/A"}", Icons.alternate_email),
-                infoBox(" ${owner?["invite_code"] ?? "N/A"}", Icons.key),
+                infoBox(" ${owner?.name ?? "N/A"}", Icons.verified_user),
+                infoBox(" ${owner?.inviteCode ?? "N/A"}", Icons.person_outline),
+                infoBox(" ${owner?.email ?? "N/A"}", Icons.alternate_email),
+                infoBox(" ${owner?.inviteCode ?? "N/A"}", Icons.key),
+              ]),
+
+            toggleHeader("REGISTERED DEVICE", showRegisteredDevice, () {
+              setState(() => showRegisteredDevice = !showRegisteredDevice);
+            }),
+            const SizedBox(height: 5),
+
+            if (showRegisteredDevice)
+              section("REGISTERED DEVICE", [
+                infoBox(" ${norvi?.name ?? "N/A"}", Icons.memory),
+                infoBox(" ${norvi?.deviceKey ?? "N/A"}", Icons.fingerprint),
+                infoBox(" ${norvi?.type ?? "N/A"}", Icons.device_hub),
+                infoBox(
+                  norvi?.isActive == true ? "ACTIVE" : "OFFLINE",
+                  Icons.power,
+                ),
               ]),
           ],
         );
@@ -479,7 +470,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
   }
 }
 
-void _openInviteManagerSheet(BuildContext context,  GasStation station) {
+void _openInviteManagerSheet(BuildContext context, GasStation station) {
   final controller = TextEditingController();
 
   showModalBottomSheet(
@@ -495,6 +486,44 @@ void _openInviteManagerSheet(BuildContext context,  GasStation station) {
       bool isInvited = false;
       String selectedRole = "manager";
 
+      Future<void> searchUser(String value, StateSetter setState) async {
+        if (value.isEmpty) return;
+
+        setState(() => isSearching = true);
+
+        try {
+          final result = await ApiService().searchInvitation(value);
+
+          setState(() {
+            foundUser = result;
+            isInvited = false;
+          });
+
+          // 🔥 If already invited (backend flag)
+          if (result.invited) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("User already invited"),
+                backgroundColor: Colors.orange,
+              ),
+            );
+          }
+        } catch (e) {
+          setState(() {
+            foundUser = null;
+          });
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text("Invite code not found"),
+              backgroundColor: Colors.red,
+            ),
+          );
+        } finally {
+          setState(() => isSearching = false);
+        }
+      }
+
       return StatefulBuilder(
         builder: (context, setState) {
           return Padding(
@@ -504,131 +533,154 @@ void _openInviteManagerSheet(BuildContext context,  GasStation station) {
               top: 16,
               bottom: MediaQuery.of(context).viewInsets.bottom + 20,
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-
-                const Text(
-                  "Invite Manager",
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text(
+                    "Invite Manager",
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
 
-                const SizedBox(height: 12),
+                  const SizedBox(height: 12),
 
-                // ================= INPUT =================
-                TextField(
-                  controller: controller,
-                  style: const TextStyle(color: Colors.white),
-                  onChanged: (value) {
-                    setState(() {
-                      foundUser = null;
-                      isInvited = false;
-                    });
-                  },
-                  onSubmitted: (value) async {
-                    if (value.isEmpty) return;
-
-                    setState(() => isSearching = true);
-
-                    try {
-                      final result =
-                      await ApiService().searchInvitation(value);
-
+                  // ================= INPUT =================
+                  TextField(
+                    controller: controller,
+                    style: const TextStyle(color: Colors.white),
+                    onChanged: (_) {
                       setState(() {
-                        foundUser = result;
+                        foundUser = null;
                         isInvited = false;
                       });
-                    } finally {
-                      setState(() => isSearching = false);
-                    }
-                  },
-                  decoration: InputDecoration(
-                    hintText: "Enter invite code",
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.05),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
+                    },
+                    onSubmitted: (value) => searchUser(value, setState),
+                    decoration: InputDecoration(
+                      hintText: "Enter invite code",
+                      hintStyle: const TextStyle(color: Colors.white54),
+                      filled: true,
+                      fillColor: Colors.white.withOpacity(0.05),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.search, color: Colors.orange),
+                        onPressed: () =>
+                            searchUser(controller.text, setState),
+                      ),
                     ),
                   ),
-                ),
 
-                const SizedBox(height: 12),
+                  const SizedBox(height: 10),
 
-                DropdownButtonFormField<String>(
-                  value: selectedRole,
-                  dropdownColor: const Color(0xFF0F2027),
-                  style: const TextStyle(color: Colors.white),
-                  items: const [
-                    DropdownMenuItem(value: "owner", child: Text("Owner")),
-                    DropdownMenuItem(value: "manager", child: Text("Manager")),
-                  ],
-                  onChanged: (value) {
-                    setState(() => selectedRole = value!);
-                  },
-                ),
-
-                const SizedBox(height: 16),
-
-                if (foundUser != null)
-                  Container(
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(14),
+                  if (isSearching)
+                    const Padding(
+                      padding: EdgeInsets.all(10),
+                      child: CircularProgressIndicator(color: Colors.orange),
                     ),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          backgroundColor: Colors.orange.withOpacity(0.2),
-                          child: const Icon(Icons.person, color: Colors.orange),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(foundUser!.username,
-                                  style: const TextStyle(color: Colors.white)),
-                              Text(foundUser!.email,
-                                  style: TextStyle(color: Colors.white54)),
-                            ],
+
+                  const SizedBox(height: 10),
+
+                  // ================= ROLE =================
+                  DropdownButtonFormField<String>(
+                    value: selectedRole,
+                    dropdownColor: const Color(0xFF0F2027),
+                    style: const TextStyle(color: Colors.white),
+                    items: const [
+                      DropdownMenuItem(value: "owner", child: Text("Owner")),
+                      DropdownMenuItem(value: "manager", child: Text("Manager")),
+                    ],
+                    onChanged: (value) {
+                      setState(() => selectedRole = value!);
+                    },
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  // ================= RESULT =================
+                  if (foundUser != null)
+                    Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(14),
+                      ),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            backgroundColor: Colors.orange.withOpacity(0.2),
+                            child: const Icon(Icons.person, color: Colors.orange),
                           ),
-                        ),
-                        IconButton(
-                          onPressed: isInvited
-                              ? null
-                              : () async {
-                            await ApiService().sendInvite(
-                              code: foundUser!.inviteCode,
-                              role: selectedRole,
-                              stationId: station.id,
-                            );
 
-                            setState(() => isInvited = true);
+                          const SizedBox(width: 12),
 
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  "Invited ${foundUser!.username}",
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  foundUser!.username,
+                                  style: const TextStyle(color: Colors.white),
                                 ),
-                              ),
-                            );
-                          },
-                          icon: Icon(
-                            isInvited
-                                ? Icons.check
-                                : Icons.person_add_alt_1,
-                            color: isInvited ? Colors.green : Colors.orange,
+                                Text(
+                                  foundUser!.email,
+                                  style: const TextStyle(color: Colors.white54),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      ],
+
+                          IconButton(
+                            onPressed: (isInvited || foundUser!.invited)
+                                ? null
+                                : () async {
+                              try {
+                                await ApiService().sendInvite(
+                                  code: foundUser!.inviteCode,
+                                  role: selectedRole,
+                                  stationId: station.id,
+                                  companyId: station.companyId,
+                                );
+
+                                setState(() => isInvited = true);
+
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      "Invited ${foundUser!.username}",
+                                    ),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text("Failed to send invite"),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                            icon: Icon(
+                              (isInvited || foundUser!.invited)
+                                  ? Icons.check
+                                  : Icons.person_add_alt_1,
+                              color: (isInvited || foundUser!.invited)
+                                  ? Colors.green
+                                  : Colors.orange,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
-                  ),
-              ],
+
+                  const SizedBox(height: 20),
+                ],
+              ),
             ),
           );
         },
@@ -636,3 +688,4 @@ void _openInviteManagerSheet(BuildContext context,  GasStation station) {
     },
   );
 }
+

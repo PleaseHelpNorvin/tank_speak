@@ -38,8 +38,7 @@ class ApiService {
   // }
 
   Future<CreateCompanyResponse> createCompany(
-    Map<String, dynamic> data,
-  ) async {
+      Map<String, dynamic> data,) async {
     final url = Uri.parse("$baseUrl/company/d/create");
 
     final response = await http.post(
@@ -100,10 +99,8 @@ class ApiService {
   // STATIONS
   // =========================
 
-  Future<CreateGasStationResponse> createGasStation(
-      int companyId,
-      Map<String, dynamic> data,
-      ) async {
+  Future<CreateGasStationResponse> createGasStation(int companyId,
+      Map<String, dynamic> data,) async {
     final url = Uri.parse(
       "$baseUrl/company/c/$companyId/station-create",
     );
@@ -257,6 +254,7 @@ class ApiService {
     required String code,
     required String role,
     required int stationId,
+    required int companyId,
   }) async {
     final url = Uri.parse("$baseUrl/invite");
 
@@ -267,6 +265,7 @@ class ApiService {
         "code": code,
         "role": role,
         "station_id": stationId,
+        "company_id": companyId,
       }),
     );
 
@@ -276,7 +275,6 @@ class ApiService {
 
     throw Exception("Failed to send invite: ${response.body}");
   }
-
 
 
   Future<void> acceptInvitation(int id) async {
@@ -334,7 +332,7 @@ class ApiService {
       url,
       headers: await _headers(auth: true),
       body: jsonEncode({
-        "device_id": deviceId,
+        "key": deviceId,
         "station_id": stationId,
       }),
     );
@@ -347,3 +345,4 @@ class ApiService {
 
     throw Exception("Failed to register device: ${response.body}");
   }
+}

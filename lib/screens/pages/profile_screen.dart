@@ -137,21 +137,21 @@ class ProfileScreen extends StatelessWidget {
 
               const SizedBox(height: 10),
 
-              ListView.builder(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: ownerStations.length,
-                itemBuilder: (context, index) {
-                  final s = ownerStations[index];
-
-                  return _stationCard(
-                    name: s.name,
-                    address: s.address,
-                    phone: s.phone,
-                    hours: s.businessHours,
-                  );
-                },
-              ),
+              // ListView.builder(
+              //   shrinkWrap: true,
+              //   physics: const NeverScrollableScrollPhysics(),
+              //   itemCount: ownerStations.length,
+              //   itemBuilder: (context, index) {
+              //     final s = ownerStations[index];
+              //
+              //     return _stationCard(
+              //       name: s.name,
+              //       address: s.address,
+              //       phone: s.phone,
+              //       hours: s.businessHours,
+              //     );
+              //   },
+              // ),
             ],
 
             // ================= MANAGER SECTION =================
@@ -204,7 +204,7 @@ class ProfileScreen extends StatelessWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          m.phone,
+                          m.name,
                           style: const TextStyle(color: Colors.white70),
                         ),
                       ],

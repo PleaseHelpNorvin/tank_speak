@@ -108,7 +108,7 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
       );
     } catch (e) {
       setState(() => status = "Error: $e");
-
+      print(e);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed: $e")),
       );

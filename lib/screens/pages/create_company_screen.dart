@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:tank_speak/screens/pages/invitations_screen.dart';
+import 'package:tank_speak/screens/pages/profile_screen.dart';
 import 'package:tank_speak/screens/pages/splash_screen.dart';
 import '../../services/api_service.dart';
 import '../../models/me_response.dart';
@@ -111,6 +113,27 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
         title: const Text("Create Company"),
         backgroundColor: const Color(0xFF0F2027),
         foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.email),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) =>  InvitationsScreen(me: widget.me)),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) =>  ProfileScreen(me: widget.me)),
+              );
+            },
+          ),
+
+        ],
       ),
 
       body: Padding(
