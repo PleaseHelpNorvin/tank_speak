@@ -29,8 +29,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
   bool showStationInfo = true;
   bool showRegisteredDevice = false;
 
-
-
   @override
   void initState() {
     super.initState();
@@ -39,15 +37,26 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
 
   Future<void> loadStation() async {
     try {
-      final result =  await api.getStationById(widget.station.id);
+      final result = await api.getStationById(widget.station.id);
 
       setState(() {
         station = result;
         isLoading = false;
+        error = null;
       });
+
     } catch (e) {
+      String message = "Something went wrong";
+
+      // 🔥 Try to extract backend message
+      if (e.toString().contains("Station not Found")) {
+        message = "You're not a member of this station";
+      } else if (e.toString().contains("404")) {
+        message = "Station not found";
+      }
+
       setState(() {
-        error = e.toString();
+        error = message;
         isLoading = false;
       });
     }
@@ -79,13 +88,22 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       );
     }
 
-    if (error != null) {
+
+    if (error != null || station == null) {
       return Scaffold(
         backgroundColor: const Color(0xFF0F2027),
+        appBar: AppBar(
+          title: Text(widget.station.name),
+          backgroundColor: const Color(0xFF0F2027),
+          foregroundColor: Colors.white,
+        ),
         body: Center(
           child: Text(
-            error!,
+            error == "Station not found"
+                ? "You're not a member of this station"
+                : error ?? "Station data not available",
             style: const TextStyle(color: Colors.red),
+            textAlign: TextAlign.center,
           ),
         ),
       );
@@ -93,6 +111,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
 
     final data = station;
     final devices = station?.station.tanks ?? [];
+
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F2027),
