@@ -148,30 +148,30 @@ class _LandingScreenState extends State<LandingScreen> {
                 const SizedBox(height: 10),
 
                 /// 🔥 BLE BUTTON
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      "BLE Provision",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                    onPressed: () {
-                      // Navigator.push(
-                      //   context,
-                      //   MaterialPageRoute(
-                      //     builder: (_) => const BleProvisionScreen(),
-                      //   ),
-                      // );
-                    },
-                  ),
-                ),
+                // SizedBox(
+                //   width: double.infinity,
+                //   child: ElevatedButton(
+                //     style: ElevatedButton.styleFrom(
+                //       backgroundColor: Colors.blue,
+                //       padding: const EdgeInsets.symmetric(vertical: 16),
+                //       shape: RoundedRectangleBorder(
+                //         borderRadius: BorderRadius.circular(12),
+                //       ),
+                //     ),
+                //     child: const Text(
+                //       "BLE Provision",
+                //       style: TextStyle(fontSize: 16),
+                //     ),
+                //     onPressed: () {
+                //       Navigator.push(
+                //         context,
+                //         MaterialPageRoute(
+                //           builder: (_) => const BleProvisionScreen(),
+                //         ),
+                //       );
+                //     },
+                //   ),
+                // ),
 
                 const SizedBox(height: 30),
               ],

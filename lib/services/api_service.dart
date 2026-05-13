@@ -12,7 +12,7 @@ import '../models/tank.dart';
 import 'mock_data.dart';
 
 class ApiService {
-  static const String baseUrl = "http://192.168.0.70:3123/api";
+  static const String baseUrl = "http://192.168.1.45:3123/api";
 
   // =========================
   // 🔐 HEADERS (CORE FIX)
@@ -157,6 +157,52 @@ class ApiService {
     throw Exception("Failed to fetch station: ${response.body}");
   }
 
+  Future<DeviceReading> getDeviceReading({
+    required String deviceId,
+    required String sensorPin,
+  }) async {
+    final encodedDeviceId = Uri.encodeComponent(deviceId);
+    final encodedPin = Uri.encodeComponent(sensorPin);
+
+    final url = Uri.parse(
+      "$baseUrl/device/$encodedDeviceId/$encodedPin/reading",
+    );
+
+    final response = await http.get(
+      url,
+      headers: await _headers(auth: true),
+    );
+
+    if (response.statusCode == 200) {
+      final json = jsonDecode(response.body);
+      return DeviceReading.fromJson(json);
+    }
+
+    throw Exception("Failed to get reading: ${response.body}");
+  }
+
+  Future<List<DeviceReading>> getDeviceReadings({
+    required String deviceId,
+    required String sensorPin,
+    int limit = 50,
+    String range = "all",
+  }) async {
+    final url = Uri.parse(
+      "$baseUrl/device/$deviceId/$sensorPin/readings"
+          "?limit=$limit&range=$range",
+    );
+
+    final response = await http.get(
+      url,
+      headers: await _headers(auth: true),
+    );
+
+    if (response.statusCode == 200) {
+      return DeviceReading.listFromJson(jsonDecode(response.body));
+    }
+
+    throw Exception("Failed to get readings: ${response.body}");
+  }
 
   // =========================
   // 🔐 AUTH

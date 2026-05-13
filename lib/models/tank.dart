@@ -1,3 +1,38 @@
+class DeviceReading {
+  final String deviceId;
+  final String sensorPin;
+  final double raw;
+  final double height;
+  final double liters;
+  final DateTime timestamp;
+
+  DeviceReading({
+    required this.deviceId,
+    required this.sensorPin,
+    required this.raw,
+    required this.height,
+    required this.liters,
+    required this.timestamp,
+  });
+
+  factory DeviceReading.fromJson(Map<String, dynamic> json) {
+    return DeviceReading(
+      deviceId: json['device_id'],
+      sensorPin: json['sensor_pin'],
+      raw: (json['raw'] as num).toDouble(),
+      height: (json['height'] as num).toDouble(),
+      liters: (json['liters'] as num).toDouble(), // FIX HERE
+      timestamp: DateTime.parse(json['timestamp']),
+    );
+  }
+
+  static List<DeviceReading> listFromJson(dynamic json) {
+    return (json as List)
+        .map((e) => DeviceReading.fromJson(e))
+        .toList();
+  }
+}
+
 class Device {
   final String id;
   final int stationId;

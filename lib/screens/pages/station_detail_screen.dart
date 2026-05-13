@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tank_speak/screens/pages/add_device_screen.dart';
 import 'package:tank_speak/screens/pages/profile_screen.dart';
+import 'package:tank_speak/screens/pages/tank_detail_screen.dart';
 import '../../models/me_response.dart';
 import '../../models/tank.dart';
 import '../../services/api_service.dart';
@@ -32,7 +33,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
   bool showOwner = false;
   bool showStationInfo = true;
   bool showRegisteredDevice = false;
-
+  Map<String, double> lastValues = {};
   @override
   void initState() {
     super.initState();
@@ -81,6 +82,49 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       default:
         return Icons.memory;
     }
+  }
+
+  Map<String, dynamic> getFuelState(String key, double current) {
+    final previous = lastValues[key];
+
+    // 🔥 OFFLINE / NO DATA
+    if (current == 0) {
+      return {
+        "label": "OFFLINE",
+        "color": Colors.grey,
+      };
+    }
+
+    // first time baseline
+    if (previous == null) {
+      lastValues[key] = current;
+      return {
+        "label": "Normal",
+        "color": Colors.green,
+      };
+    }
+
+    final diff = current - previous;
+
+    // update stored value
+    lastValues[key] = current;
+
+    if (diff > 3) {
+      return {
+        "label": "Tank Fill Alert",
+        "color": Colors.blue,
+      };
+    } else if (diff < -2) {
+      return {
+        "label": "Dry Up Alert",
+        "color": Colors.red,
+      };
+    }
+
+    return {
+      "label": "Normal",
+      "color": Colors.green,
+    };
   }
 
   @override
@@ -136,7 +180,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
 
     final data = station;
     final devices = station?.station.tanks ?? [];
-
+    final sensor = data?.sensor;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F2027),
@@ -168,110 +212,201 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         ],
       ),
 
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.orange,
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => AddDeviceScreen(station: station!.station, devices: devices,maxDevicesPerStation: 6),
-            ),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
+      // floatingActionButton: FloatingActionButton(
+      //   backgroundColor: Colors.orange,
+      //   onPressed: () {
+      //     Navigator.push(
+      //       context,
+      //       MaterialPageRoute(
+      //         builder: (_) => AddDeviceScreen(station: station!.station, devices: devices,maxDevicesPerStation: 6),
+      //       ),
+      //     );
+      //   },
+      //   child: const Icon(Icons.add),
+      // ),
 
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ================= STATION INFO =================
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.white.withOpacity(0.08)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+
+              // ================= BUTTONS =================
+              Row(
                 children: [
-                  _infoChip(data),
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => BleProvisionScreen(station: widget.station),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.precision_manufacturing),
+                      label: const Text("Register Norvi"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 5),
+
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        _openInviteManagerSheet(context, data.station);
+                      },
+                      icon: const Icon(Icons.person_add),
+                      label: const Text("Invite Manager"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.black,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                    ),
+                  ),
                 ],
               ),
-            ),
 
-            const SizedBox(height: 20),
+              const SizedBox(height: 10),
+              // ================= STATION INFO =================
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _infoChip(data),
+                  ],
+                ),
+              ),
 
-            // ================= INVITE BUTTON =================
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => BleProvisionScreen(station: widget.station),
+              const SizedBox(height: 10),
+
+
+              // const SizedBox(height: 10),
+
+              // Text(
+              //   "Norvi Sensors (${devices.first.})",
+              //   style: const TextStyle(
+              //     color: Colors.white,
+              //     fontSize: 18,
+              //     fontWeight: FontWeight.bold,
+              //   ),
+              // ),
+
+              // ================= SENSOR =================
+              if (sensor != null) ...[
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Sensor Data",
+                      style: TextStyle(
+                        color: Colors.orange,
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  );
-                  // _openInviteManagerSheet(context, data.station);
-                },
-                icon: const Icon(Icons.precision_manufacturing),
-                label: const Text("Register Norvi"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.all(14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+
+                    IconButton(
+                      icon: const Icon(Icons.refresh, color: Colors.orange),
+                      onPressed: () async {
+                        await loadStation(); // refresh API
+                      },
+                    ),
+                  ],
                 ),
-              ),
-            ),
 
-            const SizedBox(height: 10),
+                const SizedBox(height: 10),
 
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () {
-                  _openInviteManagerSheet(context, data.station);
-                },
-                icon: const Icon(Icons.person_add),
-                label: const Text("Invite Manager"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.orange,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.all(14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                Column(
+                  children: sensor.payload.entries.map((e) {
+                    final value = double.tryParse(e.value.toString()) ?? 0;
+                    final status = getFuelState(e.key, value);
+
+                    return InkWell(
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => TankDetailScreen(
+                              deviceId: sensor.deviceId, // adjust based on your model
+                              sensorPin: e.key,
+                              productName: e.key,
+                            ),
+                          ),
+                        );
+                      },
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.sensors, color: Colors.orange),
+                            const SizedBox(width: 10),
+
+                            Expanded(
+                              child: Text(
+                                "${e.key}: $value",
+                                style: const TextStyle(color: Colors.white),
+                              ),
+                            ),
+
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: (status["color"] as Color).withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: status["color"]),
+                              ),
+                              child: Text(
+                                status["label"],
+                                style: TextStyle(
+                                  color: status["color"],
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
                 ),
-              ),
-            ),
+                const SizedBox(height: 15),
+              ],
 
-            const SizedBox(height: 20),
-
-            Text(
-              "Norvi Sensors (${devices.length})",
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-
-            const SizedBox(height: 15),
-
-            // ================= DEVICE LIST =================
-            Expanded(
-              child: ListView.builder(
+              // ================= DEVICE LIST (FIXED) =================
+              ListView.builder(
                 itemCount: devices.length,
+                shrinkWrap: true, // 🔥 IMPORTANT FIX
+                physics: const NeverScrollableScrollPhysics(), // 🔥 IMPORTANT FIX
                 itemBuilder: (context, index) {
                   final device = devices[index];
-
                   final isActive = device.isActive;
 
                   return Container(
@@ -287,68 +422,39 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // HEADER
                         Row(
                           children: [
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: getStatusColor(isActive)
-                                    .withOpacity(0.15),
-                                shape: BoxShape.circle,
-                              ),
-                              child: Icon(
-                                getDeviceIcon(device.type),
-                                color: Colors.white,
-                                size: 20,
-                              ),
+                            Icon(
+                              getDeviceIcon(device.type),
+                              color: Colors.white,
                             ),
-
                             const SizedBox(width: 12),
 
                             Expanded(
                               child: Column(
-                                crossAxisAlignment:
-                                CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
                                     device.name,
                                     style: const TextStyle(
                                       color: Colors.white,
-                                      fontSize: 16,
                                       fontWeight: FontWeight.bold,
                                     ),
                                   ),
-                                  const SizedBox(height: 4),
                                   Text(
                                     device.type,
                                     style: TextStyle(
-                                      color:
-                                      Colors.white.withOpacity(0.6),
-                                      fontSize: 12,
+                                      color: Colors.white.withOpacity(0.6),
                                     ),
                                   ),
                                 ],
                               ),
                             ),
 
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: getStatusColor(isActive)
-                                    .withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                isActive ? "ACTIVE" : "OFFLINE",
-                                style: TextStyle(
-                                  color: getStatusColor(isActive),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
+                            Text(
+                              isActive ? "ACTIVE" : "OFFLINE",
+                              style: TextStyle(
+                                color: isActive ? Colors.green : Colors.red,
                               ),
                             ),
                           ],
@@ -368,8 +474,9 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                   );
                 },
               ),
-            ),
-          ],
+
+            ],
+          ),
         ),
       ),
     );

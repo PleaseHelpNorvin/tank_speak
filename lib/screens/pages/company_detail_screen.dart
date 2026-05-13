@@ -237,18 +237,18 @@ class _CompanyDetailScreenState extends State<CompanyDetailScreen> {
                       children: [
 
                         // REGISTER DEVICE
-                        IconButton(
-                          icon: const Icon(Icons.devices, color: Colors.green),
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => BleProvisionScreen(station: station),
-                              ),
-                            );
-                            print("Register device ${station.id}");
-                          },
-                        ),
+                        // IconButton(
+                        //   icon: const Icon(Icons.devices, color: Colors.green),
+                        //   onPressed: () {
+                        //     Navigator.push(
+                        //       context,
+                        //       MaterialPageRoute(
+                        //         builder: (_) => BleProvisionScreen(station: station),
+                        //       ),
+                        //     );
+                        //     print("Register device ${station.id}");
+                        //   },
+                        // ),
 
                         // EDIT
                         IconButton(

@@ -1,6 +1,8 @@
 import 'area_manager.dart';
 import 'owner.dart';
 import 'tank.dart';
+import 'sensor.dart';
+
 class GasStation {
   final int id;
   final int companyId;
@@ -40,12 +42,14 @@ class StationDetailResponse {
   final AreaManager? manager;
   final Owner? owner;
   final Device? norvi;
+  final SensorPayload? sensor;
 
   StationDetailResponse({
     required this.station,
     this.manager,
     this.owner,
     this.norvi,
+    this.sensor,
   });
 
   factory StationDetailResponse.fromJson(Map<String, dynamic> json) {
@@ -62,6 +66,9 @@ class StationDetailResponse {
 
       norvi: json['norvi'] != null
           ? Device.fromJson(json['norvi'])
+          : null,
+      sensor: json['sensor'] != null
+          ? SensorPayload.fromJson(json['sensor'])
           : null,
     );
   }
