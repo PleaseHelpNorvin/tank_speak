@@ -1,9 +1,11 @@
 class DeviceReading {
   final String deviceId;
   final String sensorPin;
+
   final double raw;
   final double height;
   final double liters;
+
   final DateTime timestamp;
 
   DeviceReading({
@@ -16,12 +18,26 @@ class DeviceReading {
   });
 
   factory DeviceReading.fromJson(Map<String, dynamic> json) {
+    final payload = json['payload'] as Map<String, dynamic>? ?? {};
+
+    final sensorPin = json['sensor_pin'] ?? '';
+
+    final value = payload[sensorPin];
+
+    final parsedValue = (value is num)
+        ? value.toDouble()
+        : double.tryParse(value.toString()) ?? 0.0;
+
     return DeviceReading(
-      deviceId: json['device_id'],
-      sensorPin: json['sensor_pin'],
-      raw: (json['raw'] as num).toDouble(),
-      height: (json['height'] as num).toDouble(),
-      liters: (json['liters'] as num).toDouble(), // FIX HERE
+      deviceId: json['device_id'] ?? '',
+      sensorPin: sensorPin,
+
+      // Since API does NOT yet separate raw/height/liters,
+      // we map them all to the same sensor value for now
+      raw: parsedValue,
+      height: parsedValue,
+      liters: parsedValue,
+
       timestamp: DateTime.parse(json['timestamp']),
     );
   }
@@ -32,6 +48,7 @@ class DeviceReading {
         .toList();
   }
 }
+
 
 class Device {
   final String id;

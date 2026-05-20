@@ -1,5 +1,4 @@
 import 'dart:async';
-
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 
@@ -32,7 +31,6 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
   bool fetching = false;
 
   String selectedRange = "day";
-
   final List<String> ranges = ["day", "week", "month"];
 
   Timer? refreshTimer;
@@ -66,7 +64,7 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
       final history = await api.getDeviceReadings(
         deviceId: widget.deviceId,
         sensorPin: widget.sensorPin,
-        limit: 50,
+        limit: 100,
         range: selectedRange,
       );
 
@@ -75,8 +73,11 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
       if (!mounted) return;
 
       setState(() {
-        readings = List<DeviceReading>.from(history);
-        latestReading = history.isNotEmpty ? history.last : null;
+        readings = history.length > 30
+            ? history.sublist(history.length - 30)
+            : history;
+
+        latestReading = readings.isNotEmpty ? readings.last : null;
         loading = false;
       });
     } catch (e) {
@@ -97,7 +98,6 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
     final age = DateTime.now().difference(latestReading!.timestamp);
 
     if (age.inMinutes > 10) return Colors.red;
-
     if (latestReading!.liters < 1000) return Colors.orange;
 
     return Colors.green;
@@ -106,9 +106,19 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
   String getStatusLabel() {
     if (latestReading == null) return "No Data";
 
-    final age = DateTime.now().difference(latestReading!.timestamp);
+    final now = DateTime.now();
+    final time = latestReading!.timestamp;
 
-    if (age.inMinutes > 10) return "Offline";
+    final ageInMinutes = now.difference(time).inMinutes;
+
+    if (ageInMinutes < 0) {
+      // future timestamp fix (clock mismatch)
+      return "Live";
+    }
+
+    if (ageInMinutes > 5) return "Offline"; // reduce threshold
+
+    if (latestReading!.liters <= 0) return "No Flow";
 
     if (latestReading!.liters < 1000) return "Low";
 
@@ -120,23 +130,31 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
   List<FlSpot> getSpots() {
     if (readings.isEmpty) return [];
 
-    final baseTime = readings.first.timestamp;
-
-    return readings.map((r) {
-      final x = r.timestamp.difference(baseTime).inMinutes.toDouble();
-      return FlSpot(x, r.liters);
+    return readings.asMap().entries.map((entry) {
+      return FlSpot(
+        entry.key.toDouble(),
+        entry.value.liters,
+      );
     }).toList();
   }
 
   double getMaxY() {
     if (readings.isEmpty) return 1;
-    final max = readings.map((e) => e.liters).reduce((a, b) => a > b ? a : b);
+
+    final max = readings
+        .map((e) => e.liters)
+        .reduce((a, b) => a > b ? a : b);
+
     return max + 5;
   }
 
   double getMinY() {
     if (readings.isEmpty) return 0;
-    final min = readings.map((e) => e.liters).reduce((a, b) => a < b ? a : b);
+
+    final min = readings
+        .map((e) => e.liters)
+        .reduce((a, b) => a < b ? a : b);
+
     return (min - 5).clamp(0, double.infinity);
   }
 
@@ -234,15 +252,54 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
               ),
             ),
 
-            const SizedBox(height: 24),
+            const SizedBox(height: 20),
 
-            const Text(
-              "Tank Trend",
-              style: TextStyle(
-                color: Colors.orange,
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-              ),
+            // 🔥 RANGE DROPDOWN
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  "Tank Trend",
+                  style: TextStyle(
+                    color: Colors.orange,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: DropdownButton<String>(
+                    value: selectedRange,
+                    dropdownColor: const Color(0xFF1C2C34),
+                    underline: const SizedBox(),
+                    style: const TextStyle(color: Colors.white),
+
+                    items: ranges.map((range) {
+                      return DropdownMenuItem(
+                        value: range,
+                        child: Text(range.toUpperCase()),
+                      );
+                    }).toList(),
+
+                    onChanged: (value) {
+                      if (value == null) return;
+
+                      setState(() {
+                        selectedRange = value;
+                        readings = [];
+                        latestReading = null;
+                      });
+
+                      fetchAllData();
+                    },
+                  ),
+                ),
+              ],
             ),
 
             const SizedBox(height: 12),
@@ -265,30 +322,20 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
                   : LineChart(
                 LineChartData(
                   minX: 0,
-                  maxX: getSpots().isEmpty
-                      ? 1
-                      : getSpots().last.x,
-
+                  maxX: readings.length.toDouble() - 1,
                   minY: getMinY(),
                   maxY: getMaxY(),
 
-                  gridData: FlGridData(
-                    show: true,
-                    drawVerticalLine: false,
-                    horizontalInterval:
-                    (getMaxY() - getMinY()) / 5,
-                  ),
-
+                  gridData: const FlGridData(show: true),
                   borderData: FlBorderData(show: false),
 
                   titlesData: FlTitlesData(
                     rightTitles: const AxisTitles(
-                        sideTitles:
-                        SideTitles(showTitles: false)),
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
                     topTitles: const AxisTitles(
-                        sideTitles:
-                        SideTitles(showTitles: false)),
-
+                      sideTitles: SideTitles(showTitles: false),
+                    ),
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
@@ -297,30 +344,34 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
                           return Text(
                             value.toInt().toString(),
                             style: const TextStyle(
-                                color: Colors.white54,
-                                fontSize: 10),
+                              color: Colors.white54,
+                              fontSize: 10,
+                            ),
                           );
                         },
                       ),
                     ),
-
                     bottomTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
-                        interval: 10,
+                        interval: 5,
                         getTitlesWidget: (value, meta) {
-                          final base =
-                              readings.first.timestamp;
-                          final time = base.add(
-                            Duration(
-                                minutes: value.toInt()),
-                          );
+                          final index = value.toInt();
+
+                          if (index < 0 ||
+                              index >= readings.length) {
+                            return const SizedBox();
+                          }
+
+                          final time =
+                              readings[index].timestamp;
 
                           return Text(
                             "${time.hour}:${time.minute.toString().padLeft(2, '0')}",
                             style: const TextStyle(
-                                color: Colors.white54,
-                                fontSize: 10),
+                              color: Colors.white54,
+                              fontSize: 10,
+                            ),
                           );
                         },
                       ),
@@ -333,19 +384,7 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
                       isCurved: true,
                       color: Colors.orange,
                       barWidth: 3,
-                      dotData:
-                      const FlDotData(show: false),
-                      belowBarData: BarAreaData(
-                        show: true,
-                        gradient: LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [
-                            Colors.orange.withOpacity(0.3),
-                            Colors.transparent,
-                          ],
-                        ),
-                      ),
+                      dotData: const FlDotData(show: false),
                     ),
                   ],
                 ),

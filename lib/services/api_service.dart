@@ -198,7 +198,9 @@ class ApiService {
     );
 
     if (response.statusCode == 200) {
-      return DeviceReading.listFromJson(jsonDecode(response.body));
+      final data = jsonDecode(response.body);
+
+      return DeviceReading.listFromJson(data);
     }
 
     throw Exception("Failed to get readings: ${response.body}");

@@ -112,6 +112,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     if (diff > 3) {
       return {
         "label": "Tank Fill Alert",
+        "label": "Tank Fill Alert",
         "color": Colors.blue,
       };
     } else if (diff < -2) {
