@@ -8,6 +8,8 @@ import '../../services/api_service.dart';
 import '../../models/invitation.dart';
 import '../../models/gas_station.dart';
 import 'ble_provision_screen.dart';
+import 'calibration_list_screen.dart';
+import 'create_calibration_profile_screen.dart';
 import 'invitations_screen.dart';
 
 class StationDetailScreen extends StatefulWidget {
@@ -34,6 +36,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
   bool showStationInfo = true;
   bool showRegisteredDevice = false;
   Map<String, double> lastValues = {};
+
   @override
   void initState() {
     super.initState();
@@ -49,7 +52,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         isLoading = false;
         error = null;
       });
-
     } catch (e) {
       String message = "Something went wrong";
 
@@ -112,7 +114,6 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     if (diff > 3) {
       return {
         "label": "Tank Fill Alert",
-        "label": "Tank Fill Alert",
         "color": Colors.blue,
       };
     } else if (diff < -2) {
@@ -129,14 +130,16 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
   }
 
   @override
+  @override
   Widget build(BuildContext context) {
     if (isLoading) {
       return const Scaffold(
         backgroundColor: Color(0xFF0F2027),
-        body: Center(child: CircularProgressIndicator()),
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
       );
     }
-
 
     if (error != null || station == null) {
       return Scaffold(
@@ -145,49 +148,44 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
           title: Text(widget.station.name),
           backgroundColor: const Color(0xFF0F2027),
           foregroundColor: Colors.white,
-          actions: [
-            IconButton(
-              icon: const Icon(Icons.email),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) =>  InvitationsScreen(me: widget.me)),
-                );
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.person),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) =>  ProfileScreen(me: widget.me)),
-                );
-              },
-            ),
-
-          ],
+        ),
+        floatingActionButton: FloatingActionButton(
+          backgroundColor: Colors.orange,
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => CreateCalibrationProfileScreen(me: widget.me),
+              ),
+            );
+          },
+          child: const Icon(Icons.add),
         ),
         body: Center(
           child: Text(
-            error == "Station not found"
-                ? "You're not a member of this station"
-                : error ?? "Station data not available",
+            error ?? "Station data not available",
             style: const TextStyle(color: Colors.red),
-            textAlign: TextAlign.center,
           ),
         ),
       );
     }
 
-    final data = station;
-    final devices = station?.station.tanks ?? [];
-    final sensor = data?.sensor;
+    final data = station!;
+
+    // 🔥 NEW DEVICES
+    final registeredDevices = data.devices;
+
+    // 🔥 FIRST DEVICE PAYLOAD
+    final firstDevice =
+    registeredDevices.isNotEmpty ? registeredDevices.first : null;
+
+    final payload = firstDevice?.latestPayload ?? {};
 
     return Scaffold(
       backgroundColor: const Color(0xFF0F2027),
 
       appBar: AppBar(
-        title: Text(data!.station.name),
+        title: Text(data.station.name),
         backgroundColor: const Color(0xFF0F2027),
         foregroundColor: Colors.white,
         actions: [
@@ -196,7 +194,9 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) =>  InvitationsScreen(me: widget.me)),
+                MaterialPageRoute(
+                  builder: (_) => InvitationsScreen(me: widget.me),
+                ),
               );
             },
           ),
@@ -205,26 +205,14 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (_) =>  ProfileScreen(me: widget.me)),
+                MaterialPageRoute(
+                  builder: (_) => ProfileScreen(me: widget.me),
+                ),
               );
             },
           ),
-
         ],
       ),
-
-      // floatingActionButton: FloatingActionButton(
-      //   backgroundColor: Colors.orange,
-      //   onPressed: () {
-      //     Navigator.push(
-      //       context,
-      //       MaterialPageRoute(
-      //         builder: (_) => AddDeviceScreen(station: station!.station, devices: devices,maxDevicesPerStation: 6),
-      //       ),
-      //     );
-      //   },
-      //   child: const Icon(Icons.add),
-      // ),
 
       body: SingleChildScrollView(
         child: Padding(
@@ -242,7 +230,8 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => BleProvisionScreen(station: widget.station),
+                            builder: (_) =>
+                                BleProvisionScreen(station: widget.station),
                           ),
                         );
                       },
@@ -251,14 +240,11 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
                         foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
                       ),
                     ),
                   ),
 
-                  const SizedBox(width: 5),
+                  const SizedBox(width: 15),
 
                   Expanded(
                     child: ElevatedButton.icon(
@@ -270,49 +256,54 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.orange,
                         foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
                       ),
                     ),
                   ),
                 ],
               ),
 
-              const SizedBox(height: 10),
-              // ================= STATION INFO =================
+              const SizedBox(height: 5),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                CalibrationListScreen(me : widget.me),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.precision_manufacturing),
+                      label: const Text("Manage Lookups"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange,
+                        foregroundColor: Colors.black,
+                      ),
+                    ),
+                  ),
+
+                ]
+              ),
+              const SizedBox(height: 15),
+
+    // ================= INFO =================
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.white.withOpacity(0.06),
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white.withOpacity(0.08)),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _infoChip(data),
-                  ],
-                ),
+                child: _infoChip(data),
               ),
 
-              const SizedBox(height: 10),
+              const SizedBox(height: 20),
 
-
-              // const SizedBox(height: 10),
-
-              // Text(
-              //   "Norvi Sensors (${devices.first.})",
-              //   style: const TextStyle(
-              //     color: Colors.white,
-              //     fontSize: 18,
-              //     fontWeight: FontWeight.bold,
-              //   ),
-              // ),
-
-              // ================= SENSOR =================
-              if (sensor != null) ...[
+              // ================= SENSOR DATA =================
+              if (payload.isNotEmpty) ...[
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
@@ -328,7 +319,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     IconButton(
                       icon: const Icon(Icons.refresh, color: Colors.orange),
                       onPressed: () async {
-                        await loadStation(); // refresh API
+                        await loadStation();
                       },
                     ),
                   ],
@@ -337,20 +328,40 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                 const SizedBox(height: 10),
 
                 Column(
-                  children: sensor.payload.entries.map((e) {
-                    final value = double.tryParse(e.value.toString()) ?? 0;
-                    final status = getFuelState(e.key, value);
+                  children: payload.entries.map((e) {
 
+                    final sensorData =
+                    e.value as Map<String, dynamic>;
+
+                    final value = double.tryParse(
+                      sensorData["value"].toString(),
+                    ) ?? 0;
+
+                    final label =
+                        sensorData["label"] ?? e.key;
+                    final activeCalibProfile = sensorData["active_calibration_profile_id"];
+
+                    final int? activeCalibProfileId = activeCalibProfile is int
+                        ? activeCalibProfile
+                        : int.tryParse(activeCalibProfile.toString());
+                    debugPrint('activeCalibProfileId:  $activeCalibProfileId');
+                    final status = getFuelState(e.key, value);
+                    debugPrint("label: $label");
                     return InkWell(
                       onTap: () {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => TankDetailScreen(
-                              deviceId: sensor.deviceId, // adjust based on your model
-                              sensorPin: e.key,
-                              productName: e.key,
-                            ),
+                            builder: (_) =>
+                                TankDetailScreen(
+                                  me: widget.me,
+                                  deviceId: firstDevice!.device.id,
+                                  sensorPin: e.key,
+                                  productName: label,
+                                  deviceKey: firstDevice.device.deviceKey,
+                                  activeCalibProfileId: activeCalibProfileId,
+                                  stationId: widget.station.id
+                                ),
                           ),
                         );
                       },
@@ -363,13 +374,36 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                         ),
                         child: Row(
                           children: [
-                            const Icon(Icons.sensors, color: Colors.orange),
+
+                            const Icon(
+                              Icons.sensors,
+                              color: Colors.orange,
+                            ),
+
                             const SizedBox(width: 10),
 
                             Expanded(
-                              child: Text(
-                                "${e.key}: $value",
-                                style: const TextStyle(color: Colors.white),
+                              child: Column(
+                                crossAxisAlignment:
+                                CrossAxisAlignment.start,
+                                children: [
+
+                                  Text(
+                                    label,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+
+                                  Text(
+                                    "${e.key}: $value",
+                                    style: TextStyle(
+                                      color:
+                                      Colors.white.withOpacity(0.7),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
 
@@ -379,9 +413,13 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                                 vertical: 4,
                               ),
                               decoration: BoxDecoration(
-                                color: (status["color"] as Color).withOpacity(0.2),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: status["color"]),
+                                color: (status["color"] as Color)
+                                    .withOpacity(0.2),
+                                borderRadius:
+                                BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: status["color"],
+                                ),
                               ),
                               child: Text(
                                 status["label"],
@@ -398,84 +436,111 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                     );
                   }).toList(),
                 ),
-                const SizedBox(height: 15),
               ],
 
-              // ================= DEVICE LIST (FIXED) =================
-              ListView.builder(
-                itemCount: devices.length,
-                shrinkWrap: true, // 🔥 IMPORTANT FIX
-                physics: const NeverScrollableScrollPhysics(), // 🔥 IMPORTANT FIX
-                itemBuilder: (context, index) {
-                  final device = devices[index];
-                  final isActive = device.isActive;
+              const SizedBox(height: 20),
 
-                  return Container(
-                    margin: const EdgeInsets.only(bottom: 14),
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.08),
-                      borderRadius: BorderRadius.circular(16),
-                      border: Border.all(
-                        color: getStatusColor(isActive).withOpacity(0.5),
-                      ),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Icon(
-                              getDeviceIcon(device.type),
-                              color: Colors.white,
-                            ),
-                            const SizedBox(width: 12),
-
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    device.name,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Text(
-                                    device.type,
-                                    style: TextStyle(
-                                      color: Colors.white.withOpacity(0.6),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            Text(
-                              isActive ? "ACTIVE" : "OFFLINE",
-                              style: TextStyle(
-                                color: isActive ? Colors.green : Colors.red,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 10),
-
-                        Text(
-                          "Last Seen: ${device.lastSeen}",
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.7),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-
+              // ================= REGISTERED DEVICES =================
+              // const Text(
+              //   "Registered Devices",
+              //   style: TextStyle(
+              //     color: Colors.orange,
+              //     fontWeight: FontWeight.bold,
+              //     fontSize: 16,
+              //   ),
+              // ),
+              //
+              // const SizedBox(height: 10),
+              //
+              // ListView.builder(
+              //   itemCount: registeredDevices.length,
+              //   shrinkWrap: true,
+              //   physics: const NeverScrollableScrollPhysics(),
+              //   itemBuilder: (context, index) {
+              //     final item = registeredDevices[index];
+              //     final device = item.device;
+              //
+              //     return Container(
+              //       margin: const EdgeInsets.only(bottom: 14),
+              //       padding: const EdgeInsets.all(16),
+              //       decoration: BoxDecoration(
+              //         color: Colors.white.withOpacity(0.08),
+              //         borderRadius: BorderRadius.circular(16),
+              //       ),
+              //       child: Column(
+              //         crossAxisAlignment:
+              //         CrossAxisAlignment.start,
+              //         children: [
+              //
+              //           Row(
+              //             children: [
+              //
+              //               Icon(
+              //                 getDeviceIcon(device.type),
+              //                 color: Colors.white,
+              //               ),
+              //
+              //               const SizedBox(width: 12),
+              //
+              //               Expanded(
+              //                 child: Column(
+              //                   crossAxisAlignment:
+              //                   CrossAxisAlignment.start,
+              //                   children: [
+              //
+              //                     Text(
+              //                       device.name,
+              //                       style: const TextStyle(
+              //                         color: Colors.white,
+              //                         fontWeight: FontWeight.bold,
+              //                       ),
+              //                     ),
+              //
+              //                     Text(
+              //                       device.type,
+              //                       style: TextStyle(
+              //                         color: Colors.white
+              //                             .withOpacity(0.7),
+              //                       ),
+              //                     ),
+              //                   ],
+              //                 ),
+              //               ),
+              //
+              //               const Text(
+              //                 "ACTIVE",
+              //                 style: TextStyle(
+              //                   color: Colors.green,
+              //                 ),
+              //               ),
+              //             ],
+              //           ),
+              //
+              //           const SizedBox(height: 10),
+              //
+              //           Text(
+              //             "Device Key: ${device.deviceKey}",
+              //             style: TextStyle(
+              //               color:
+              //               Colors.white.withOpacity(0.7),
+              //             ),
+              //           ),
+              //
+              //           const SizedBox(height: 5),
+              //
+              //           Text(
+              //             "Payload Time: ${item.payloadCreatedAt ?? 'N/A'}",
+              //             style: TextStyle(
+              //               color:
+              //               Colors.white.withOpacity(0.7),
+              //               fontSize: 12,
+              //             ),
+              //           ),
+              //         ],
+              //       ),
+              //     );
+              //   },
+              // ),
             ],
           ),
         ),
@@ -487,8 +552,12 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     final station = data.station;
     final manager = data.manager;
     final owner = data.owner;
-    final norvi = data.norvi;
+    final devices = data.devices;
 
+    final StationDevice? firstDevice =
+    devices.isNotEmpty ? devices.first : null;
+
+    final device = firstDevice?.device;
 
     Widget infoBox(String value, IconData icon) {
       return Container(
@@ -501,7 +570,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
         child: Row(
           children: [
             Icon(icon, color: Colors.orange, size: 16),
-
+            const SizedBox(width: 6),
             Expanded(
               child: Text(
                 value,
@@ -518,32 +587,26 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
       );
     }
 
-    Widget section(String title, List<Widget> children) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title
-          GridView.count(
-            crossAxisCount: 2,
-            crossAxisSpacing: 5,
-            mainAxisSpacing: 5,
-            childAspectRatio: 3.5,
-
-            // 🔥 IMPORTANT FIXES
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            padding: EdgeInsets.zero,
-            children: children,
-          ),
-        ],
+    Widget section(List<Widget> children) {
+      return GridView.count(
+        crossAxisCount: 2,
+        crossAxisSpacing: 5,
+        mainAxisSpacing: 5,
+        childAspectRatio: 3.5,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        padding: EdgeInsets.zero,
+        children: children,
       );
     }
 
-    Widget toggleHeader(String title, bool value, VoidCallback onTap) {
+    Widget toggleHeader(String title,
+        bool value,
+        VoidCallback onTap,) {
       return InkWell(
         onTap: onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 0),
+          padding: const EdgeInsets.symmetric(vertical: 4),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -573,292 +636,294 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
           children: [
             // ================= STATION =================
             toggleHeader("STATION INFO", showStationInfo, () {
-                setState(() => showStationInfo = !showStationInfo);
-              }),
-
+              setState(() => showStationInfo = !showStationInfo);
+            }),
 
             const SizedBox(height: 5),
 
             if (showStationInfo)
-              section(
-                "Station Info",
-                [
-                  infoBox(" ${station.name}", Icons.local_gas_station),
-                  infoBox(" ${station.phone}", Icons.phone),
-                  infoBox(" ${station.address}", Icons.location_on),
-                  infoBox(" ${station.businessHours}", Icons.schedule),
-                ],
-              ),
-
+              section([
+                infoBox(station.name, Icons.local_gas_station),
+                infoBox(station.phone, Icons.phone),
+                infoBox(station.address, Icons.location_on),
+                infoBox(station.businessHours, Icons.schedule),
+              ]),
 
             // ================= MANAGER =================
             toggleHeader("MANAGER", showManager, () {
               setState(() => showManager = !showManager);
             }),
+
             const SizedBox(height: 5),
 
             if (showManager)
-              section("MANAGER DETAILS", [
-                infoBox(" ${manager?.name ?? "N/A"}", Icons.person),
-                infoBox(" ${manager?.username ?? "N/A"}", Icons.supervised_user_circle),
-                infoBox(" ${manager?.inviteCode ?? "N/A"}", Icons.code),
-                infoBox(" ${manager?.email ?? "N/A"}", Icons.email),
-
+              section([
+                infoBox(manager?.name ?? "N/A", Icons.person),
+                infoBox(
+                    manager?.username ?? "N/A", Icons.supervised_user_circle),
+                infoBox(manager?.inviteCode ?? "N/A", Icons.code),
+                infoBox(manager?.email ?? "N/A", Icons.email),
               ]),
-
 
             // ================= OWNER =================
             toggleHeader("OWNER", showOwner, () {
               setState(() => showOwner = !showOwner);
             }),
+
             const SizedBox(height: 5),
 
             if (showOwner)
-              section("OWNER DETAILS", [
-                infoBox(" ${owner?.name ?? "N/A"}", Icons.verified_user),
-                infoBox(" ${owner?.inviteCode ?? "N/A"}", Icons.person_outline),
-                infoBox(" ${owner?.email ?? "N/A"}", Icons.alternate_email),
-                infoBox(" ${owner?.inviteCode ?? "N/A"}", Icons.key),
+              section([
+                infoBox(owner?.name ?? "N/A", Icons.verified_user),
+                infoBox(owner?.inviteCode ?? "N/A", Icons.person_outline),
+                infoBox(owner?.email ?? "N/A", Icons.alternate_email),
               ]),
 
+            // ================= DEVICE =================
             toggleHeader("REGISTERED DEVICE", showRegisteredDevice, () {
               setState(() => showRegisteredDevice = !showRegisteredDevice);
             }),
+
             const SizedBox(height: 5),
 
             if (showRegisteredDevice)
-              section("REGISTERED DEVICE", [
-                infoBox(" ${norvi?.name ?? "N/A"}", Icons.memory),
-                infoBox(" ${norvi?.deviceKey ?? "N/A"}", Icons.fingerprint),
-                infoBox(" ${norvi?.type ?? "N/A"}", Icons.device_hub),
-                infoBox(
-                  norvi?.isActive == true ? "ACTIVE" : "OFFLINE",
-                  Icons.power,
-                ),
+              section([
+                infoBox(device?.name ?? "N/A", Icons.memory),
+                infoBox(device?.deviceKey ?? "N/A", Icons.fingerprint),
+                infoBox(device?.type ?? "N/A", Icons.device_hub),
+                // infoBox(
+                //   firstDevice?.device.isActive == true ? "ACTIVE" : "OFFLINE",
+                //   Icons.power,
+                // ),
               ]),
           ],
         );
       },
     );
   }
-}
 
-void _openInviteManagerSheet(BuildContext context, GasStation station) {
-  final controller = TextEditingController();
+  void _openInviteManagerSheet(BuildContext context, GasStation station) {
+    final controller = TextEditingController();
 
-  showModalBottomSheet(
-    context: context,
-    backgroundColor: const Color(0xFF0F2027),
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-    ),
-    builder: (context) {
-      Invitation? foundUser;
-      bool isSearching = false;
-      bool isInvited = false;
-      String selectedRole = "manager";
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF0F2027),
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) {
+        Invitation? foundUser;
+        bool isSearching = false;
+        bool isInvited = false;
+        String selectedRole = "manager";
 
-      Future<void> searchUser(String value, StateSetter setState) async {
-        if (value.isEmpty) return;
+        Future<void> searchUser(String value, StateSetter setState) async {
+          if (value.isEmpty) return;
 
-        setState(() => isSearching = true);
+          setState(() => isSearching = true);
 
-        try {
-          final result = await ApiService().searchInvitation(value);
+          try {
+            final result = await ApiService().searchInvitation(value);
 
-          setState(() {
-            foundUser = result;
-            isInvited = false;
-          });
+            setState(() {
+              foundUser = result;
+              isInvited = false;
+            });
 
-          // 🔥 If already invited (backend flag)
-          if (result.invited) {
+            // 🔥 If already invited (backend flag)
+            if (result.invited) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text("User already invited"),
+                  backgroundColor: Colors.orange,
+                ),
+              );
+            }
+          } catch (e) {
+            setState(() {
+              foundUser = null;
+            });
+
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
-                content: Text("User already invited"),
-                backgroundColor: Colors.orange,
+                content: Text("Invite code not found"),
+                backgroundColor: Colors.red,
               ),
             );
+          } finally {
+            setState(() => isSearching = false);
           }
-        } catch (e) {
-          setState(() {
-            foundUser = null;
-          });
-
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Invite code not found"),
-              backgroundColor: Colors.red,
-            ),
-          );
-        } finally {
-          setState(() => isSearching = false);
         }
-      }
 
-      return StatefulBuilder(
-        builder: (context, setState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              left: 16,
-              right: 16,
-              top: 16,
-              bottom: MediaQuery.of(context).viewInsets.bottom + 20,
-            ),
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Text(
-                    "Invite Manager",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-
-                  const SizedBox(height: 12),
-
-                  // ================= INPUT =================
-                  TextField(
-                    controller: controller,
-                    style: const TextStyle(color: Colors.white),
-                    onChanged: (_) {
-                      setState(() {
-                        foundUser = null;
-                        isInvited = false;
-                      });
-                    },
-                    onSubmitted: (value) => searchUser(value, setState),
-                    decoration: InputDecoration(
-                      hintText: "Enter invite code",
-                      hintStyle: const TextStyle(color: Colors.white54),
-                      filled: true,
-                      fillColor: Colors.white.withOpacity(0.05),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      suffixIcon: IconButton(
-                        icon: const Icon(Icons.search, color: Colors.orange),
-                        onPressed: () =>
-                            searchUser(controller.text, setState),
-                      ),
-                    ),
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  if (isSearching)
-                    const Padding(
-                      padding: EdgeInsets.all(10),
-                      child: CircularProgressIndicator(color: Colors.orange),
-                    ),
-
-                  const SizedBox(height: 10),
-
-                  // ================= ROLE =================
-                  DropdownButtonFormField<String>(
-                    value: selectedRole,
-                    dropdownColor: const Color(0xFF0F2027),
-                    style: const TextStyle(color: Colors.white),
-                    items: const [
-                      DropdownMenuItem(value: "owner", child: Text("Owner")),
-                      DropdownMenuItem(value: "manager", child: Text("Manager")),
-                    ],
-                    onChanged: (value) {
-                      setState(() => selectedRole = value!);
-                    },
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // ================= RESULT =================
-                  if (foundUser != null)
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.06),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            backgroundColor: Colors.orange.withOpacity(0.2),
-                            child: const Icon(Icons.person, color: Colors.orange),
-                          ),
-
-                          const SizedBox(width: 12),
-
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  foundUser!.username,
-                                  style: const TextStyle(color: Colors.white),
-                                ),
-                                Text(
-                                  foundUser!.email,
-                                  style: const TextStyle(color: Colors.white54),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          IconButton(
-                            onPressed: (isInvited || foundUser!.invited)
-                                ? null
-                                : () async {
-                              try {
-                                await ApiService().sendInvite(
-                                  code: foundUser!.inviteCode,
-                                  role: selectedRole,
-                                  stationId: station.id,
-                                  companyId: station.companyId,
-                                );
-
-                                setState(() => isInvited = true);
-
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      "Invited ${foundUser!.username}",
-                                    ),
-                                    backgroundColor: Colors.green,
-                                  ),
-                                );
-                              } catch (e) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  const SnackBar(
-                                    content: Text("Failed to send invite"),
-                                    backgroundColor: Colors.red,
-                                  ),
-                                );
-                              }
-                            },
-                            icon: Icon(
-                              (isInvited || foundUser!.invited)
-                                  ? Icons.check
-                                  : Icons.person_add_alt_1,
-                              color: (isInvited || foundUser!.invited)
-                                  ? Colors.green
-                                  : Colors.orange,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                  const SizedBox(height: 20),
-                ],
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Padding(
+              padding: EdgeInsets.only(
+                left: 16,
+                right: 16,
+                top: 16,
+                bottom: MediaQuery
+                    .of(context)
+                    .viewInsets
+                    .bottom + 20,
               ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      "Invite Manager",
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
 
+                    const SizedBox(height: 12),
+
+                    // ================= INPUT =================
+                    TextField(
+                      controller: controller,
+                      style: const TextStyle(color: Colors.white),
+                      onChanged: (_) {
+                        setState(() {
+                          foundUser = null;
+                          isInvited = false;
+                        });
+                      },
+                      onSubmitted: (value) => searchUser(value, setState),
+                      decoration: InputDecoration(
+                        hintText: "Enter invite code",
+                        hintStyle: const TextStyle(color: Colors.white54),
+                        filled: true,
+                        fillColor: Colors.white.withOpacity(0.05),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.search, color: Colors.orange),
+                          onPressed: () =>
+                              searchUser(controller.text, setState),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 10),
+
+                    if (isSearching)
+                      const Padding(
+                        padding: EdgeInsets.all(10),
+                        child: CircularProgressIndicator(color: Colors.orange),
+                      ),
+
+                    const SizedBox(height: 10),
+
+                    // ================= ROLE =================
+                    DropdownButtonFormField<String>(
+                      value: selectedRole,
+                      dropdownColor: const Color(0xFF0F2027),
+                      style: const TextStyle(color: Colors.white),
+                      items: const [
+                        DropdownMenuItem(value: "owner", child: Text("Owner")),
+                        DropdownMenuItem(value: "manager", child: Text(
+                            "Manager")),
+                      ],
+                      onChanged: (value) {
+                        setState(() => selectedRole = value!);
+                      },
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    // ================= RESULT =================
+                    if (foundUser != null)
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.06),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: Row(
+                          children: [
+                            CircleAvatar(
+                              backgroundColor: Colors.orange.withOpacity(0.2),
+                              child: const Icon(
+                                  Icons.person, color: Colors.orange),
+                            ),
+
+                            const SizedBox(width: 12),
+
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    foundUser!.username,
+                                    style: const TextStyle(color: Colors.white),
+                                  ),
+                                  Text(
+                                    foundUser!.email,
+                                    style: const TextStyle(
+                                        color: Colors.white54),
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            IconButton(
+                              onPressed: (isInvited || foundUser!.invited)
+                                  ? null
+                                  : () async {
+                                try {
+                                  await ApiService().sendInvite(
+                                    code: foundUser!.inviteCode,
+                                    role: selectedRole,
+                                    stationId: station.id,
+                                    companyId: station.companyId,
+                                  );
+
+                                  setState(() => isInvited = true);
+
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        "Invited ${foundUser!.username}",
+                                      ),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Failed to send invite"),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: Icon(
+                                (isInvited || foundUser!.invited)
+                                    ? Icons.check
+                                    : Icons.person_add_alt_1,
+                                color: (isInvited || foundUser!.invited)
+                                    ? Colors.green
+                                    : Colors.orange,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 20),
+                  ],
+                ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+}

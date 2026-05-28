@@ -3,7 +3,6 @@ class DeviceReading {
   final String sensorPin;
 
   final double raw;
-  final double height;
   final double liters;
 
   final DateTime timestamp;
@@ -12,80 +11,99 @@ class DeviceReading {
     required this.deviceId,
     required this.sensorPin,
     required this.raw,
-    required this.height,
     required this.liters,
     required this.timestamp,
   });
 
-  factory DeviceReading.fromJson(Map<String, dynamic> json) {
-    final payload = json['payload'] as Map<String, dynamic>? ?? {};
+  factory DeviceReading.fromJson({
+    required Map<String, dynamic> json,
+    required String deviceId,
+    required String sensorPin,
+  }) {
 
-    final sensorPin = json['sensor_pin'] ?? '';
-
-    final value = payload[sensorPin];
-
-    final parsedValue = (value is num)
-        ? value.toDouble()
-        : double.tryParse(value.toString()) ?? 0.0;
+    final rawValue = json['raw'];
+    final litersValue = json['value'];
 
     return DeviceReading(
-      deviceId: json['device_id'] ?? '',
+      deviceId: deviceId,
       sensorPin: sensorPin,
 
-      // Since API does NOT yet separate raw/height/liters,
-      // we map them all to the same sensor value for now
-      raw: parsedValue,
-      height: parsedValue,
-      liters: parsedValue,
+      raw: rawValue is num
+          ? rawValue.toDouble()
+          : double.tryParse(rawValue.toString()) ?? 0,
 
-      timestamp: DateTime.parse(json['timestamp']),
+      liters: litersValue is num
+          ? litersValue.toDouble()
+          : double.tryParse(litersValue.toString()) ?? 0,
+
+      timestamp: DateTime.parse(
+        json['timestamp'],
+      ),
     );
   }
 
-  static List<DeviceReading> listFromJson(dynamic json) {
-    return (json as List)
-        .map((e) => DeviceReading.fromJson(e))
-        .toList();
+  static List<DeviceReading> listFromJson(
+      Map<String, dynamic> json,
+      ) {
+
+    final deviceId =
+        json['device_id']?.toString() ?? '';
+
+    final sensorPin =
+        json['sensor_pin']?.toString() ?? '';
+
+    final readings =
+        json['readings'] as List? ?? [];
+
+    return readings.map((e) {
+      return DeviceReading.fromJson(
+        json: e,
+        deviceId: deviceId,
+        sensorPin: sensorPin,
+      );
+    }).toList();
   }
 }
 
+class StationDevice {
+  final Device device;
+  final Map<String, dynamic> latestPayload;
+  final String? payloadCreatedAt;
+
+  StationDevice({
+    required this.device,
+    required this.latestPayload,
+    this.payloadCreatedAt,
+  });
+
+  factory StationDevice.fromJson(Map<String, dynamic> json) {
+    return StationDevice(
+      device: Device.fromJson(json['device']),
+      latestPayload: json['latest_payload'] ?? {},
+      payloadCreatedAt: json['payload_created_at'],
+    );
+  }
+}
 
 class Device {
   final String id;
-  final int stationId;
   final String name;
   final String deviceKey;
   final String type;
-  final bool isActive;
-  final DateTime? lastSeen;
-  final DateTime createdAt;
-  final DateTime updatedAt;
 
   Device({
     required this.id,
-    required this.stationId,
     required this.name,
     required this.deviceKey,
     required this.type,
-    required this.isActive,
-    this.lastSeen,
-    required this.createdAt,
-    required this.updatedAt,
   });
 
   factory Device.fromJson(Map<String, dynamic> json) {
     return Device(
       id: json['id'].toString(),
-      stationId: json['station_id'],
       name: json['name'] ?? '',
       deviceKey: json['device_key'] ?? '',
       type: json['type'] ?? '',
-      isActive: json['is_active'] ?? false,
-      lastSeen: json['last_seen'] != null
-          ? DateTime.parse(json['last_seen'])
-          : null,
-      createdAt: DateTime.parse(json['created_at']),
-      updatedAt: DateTime.parse(json['updated_at']),
     );
   }
 }

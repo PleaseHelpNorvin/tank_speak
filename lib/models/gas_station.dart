@@ -41,15 +41,13 @@ class StationDetailResponse {
   final GasStation station;
   final AreaManager? manager;
   final Owner? owner;
-  final Device? norvi;
-  final SensorPayload? sensor;
+  final List<StationDevice> devices;
 
   StationDetailResponse({
     required this.station,
     this.manager,
     this.owner,
-    this.norvi,
-    this.sensor,
+    required this.devices,
   });
 
   factory StationDetailResponse.fromJson(Map<String, dynamic> json) {
@@ -64,12 +62,9 @@ class StationDetailResponse {
           ? Owner.fromJson(json['owner'])
           : null,
 
-      norvi: json['norvi'] != null
-          ? Device.fromJson(json['norvi'])
-          : null,
-      sensor: json['sensor'] != null
-          ? SensorPayload.fromJson(json['sensor'])
-          : null,
+      devices: (json['devices'] as List<dynamic>? ?? [])
+          .map((e) => StationDevice.fromJson(e))
+          .toList(),
     );
   }
 }

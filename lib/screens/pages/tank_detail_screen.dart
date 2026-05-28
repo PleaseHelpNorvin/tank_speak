@@ -1,20 +1,32 @@
 import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
+import 'package:tank_speak/screens/pages/set_calibration_screen.dart';
 
+import '../../models/me_response.dart';
 import '../../models/tank.dart';
 import '../../services/api_service.dart';
+import 'package:intl/intl.dart';
+
+import 'edit_sensor_name.dart';
 
 class TankDetailScreen extends StatefulWidget {
+  final MeResponse me;
   final String deviceId;
   final String sensorPin;
   final String productName;
-
+  final String deviceKey;
+  final int? activeCalibProfileId;
+  final int stationId;
   const TankDetailScreen({
     super.key,
+    required this.me,
     required this.deviceId,
     required this.sensorPin,
     required this.productName,
+    required this.deviceKey,
+    required this.activeCalibProfileId,
+    required this.stationId,
   });
 
   @override
@@ -30,14 +42,24 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
   bool loading = false;
   bool fetching = false;
 
-  String selectedRange = "day";
-  final List<String> ranges = ["day", "week", "month"];
+  String selectedRange = "all";
+
+  final List<String> ranges = [
+    "all",
+    "week",
+    "month",
+  ];
 
   Timer? refreshTimer;
+  String formatTime(DateTime? time) {
+    if (time == null) return "-";
+    return DateFormat('MMM dd, yyyy • hh:mm a').format(time);
+  }
 
   @override
   void initState() {
     super.initState();
+
     fetchAllData();
 
     refreshTimer = Timer.periodic(
@@ -52,23 +74,27 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
     super.dispose();
   }
 
+  // ================= FETCH =================
+
   Future<void> fetchAllData() async {
     if (fetching) return;
+
     fetching = true;
 
     if (readings.isEmpty) {
       setState(() => loading = true);
     }
-
     try {
       final history = await api.getDeviceReadings(
-        deviceId: widget.deviceId,
+        deviceId: widget.deviceKey,
         sensorPin: widget.sensorPin,
         limit: 100,
         range: selectedRange,
       );
-
-      history.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+      // sort oldest -> newest
+      history.sort(
+            (a, b) => a.timestamp.compareTo(b.timestamp),
+      );
 
       if (!mounted) return;
 
@@ -77,11 +103,15 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
             ? history.sublist(history.length - 30)
             : history;
 
-        latestReading = readings.isNotEmpty ? readings.last : null;
+        latestReading = readings.isNotEmpty
+            ? readings.last
+            : null;
+
         loading = false;
       });
     } catch (e) {
       debugPrint("FETCH ERROR: $e");
+
       if (mounted) {
         setState(() => loading = false);
       }
@@ -93,34 +123,51 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
   // ================= STATUS =================
 
   Color getStatusColor() {
-    if (latestReading == null) return Colors.grey;
+    if (latestReading == null) {
+      return Colors.grey;
+    }
 
-    final age = DateTime.now().difference(latestReading!.timestamp);
+    final age = DateTime.now()
+        .difference(latestReading!.timestamp);
 
-    if (age.inMinutes > 10) return Colors.red;
-    if (latestReading!.liters < 1000) return Colors.orange;
+    if (age.inMinutes > 5) {
+      return Colors.red;
+    }
+
+    if (latestReading!.liters <= 0) {
+      return Colors.orange;
+    }
+
+    if (latestReading!.liters < 2000) {
+      return Colors.orange;
+    }
 
     return Colors.green;
   }
 
   String getStatusLabel() {
-    if (latestReading == null) return "No Data";
+    if (latestReading == null) {
+      return "No Data";
+    }
 
-    final now = DateTime.now();
-    final time = latestReading!.timestamp;
+    final age = DateTime.now()
+        .difference(latestReading!.timestamp);
 
-    final ageInMinutes = now.difference(time).inMinutes;
-
-    if (ageInMinutes < 0) {
-      // future timestamp fix (clock mismatch)
+    if (age.inMinutes < 0) {
       return "Live";
     }
 
-    if (ageInMinutes > 5) return "Offline"; // reduce threshold
+    if (age.inMinutes > 5) {
+      return "Offline";
+    }
 
-    if (latestReading!.liters <= 0) return "No Flow";
+    if (latestReading!.liters <= 0) {
+      return "No Flow";
+    }
 
-    if (latestReading!.liters < 1000) return "Low";
+    if (latestReading!.liters < 2000) {
+      return "Low";
+    }
 
     return "Normal";
   }
@@ -128,7 +175,9 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
   // ================= CHART =================
 
   List<FlSpot> getSpots() {
-    if (readings.isEmpty) return [];
+    if (readings.isEmpty) {
+      return [];
+    }
 
     return readings.asMap().entries.map((entry) {
       return FlSpot(
@@ -139,23 +188,28 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
   }
 
   double getMaxY() {
-    if (readings.isEmpty) return 1;
+    if (readings.isEmpty) {
+      return 1;
+    }
 
     final max = readings
         .map((e) => e.liters)
         .reduce((a, b) => a > b ? a : b);
 
-    return max + 5;
+    return max + (max * 0.05);
   }
 
   double getMinY() {
-    if (readings.isEmpty) return 0;
+    if (readings.isEmpty) {
+      return 0;
+    }
 
     final min = readings
         .map((e) => e.liters)
         .reduce((a, b) => a < b ? a : b);
 
-    return (min - 5).clamp(0, double.infinity);
+    return (min - (min * 0.05))
+        .clamp(0, double.infinity);
   }
 
   // ================= UI =================
@@ -178,120 +232,213 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
       ),
 
       body: loading
-          ? const Center(child: CircularProgressIndicator(color: Colors.orange))
+          ? const Center(
+        child: CircularProgressIndicator(
+          color: Colors.orange,
+        ),
+      )
           : SingleChildScrollView(
         padding: const EdgeInsets.all(16),
+
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+
           children: [
 
-            // DEVICE INFO
+// ================= DEVICE INFO =================
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.06),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Column(
+
+              child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text("Device: ${widget.deviceId}",
-                      style: const TextStyle(color: Colors.white)),
-                  const SizedBox(height: 6),
-                  Text("Sensor: ${widget.sensorPin}",
-                      style: const TextStyle(color: Colors.white70)),
-                ],
-              ),
-            ),
 
-            const SizedBox(height: 20),
+                  // LEFT SIDE (TEXT INFO)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
 
-            // LIVE CARD
-            Container(
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.06),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: latestReading == null
-                  ? const Text("No data",
-                  style: TextStyle(color: Colors.white))
-                  : Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        width: 14,
-                        height: 14,
-                        decoration: BoxDecoration(
-                          color: getStatusColor(),
-                          shape: BoxShape.circle,
+                        const SizedBox(height: 6),
+
+                        Row(
+                          children: [
+                            Container(
+                              width: 14,
+                              height: 14,
+
+                              decoration: BoxDecoration(
+                                color: getStatusColor(),
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+
+                            const SizedBox(width: 10),
+
+                            Text(
+                              getStatusLabel(),
+
+                              style: TextStyle(
+                                color:
+                                getStatusColor(),
+                                fontWeight:
+                                FontWeight.bold,
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
-                      const SizedBox(width: 10),
-                      Text(
-                        getStatusLabel(),
-                        style: TextStyle(
-                          color: getStatusColor(),
-                          fontWeight: FontWeight.bold,
+                        const SizedBox(height: 6),
+
+                        Text(
+                          "${latestReading?.liters.toStringAsFixed(1) ?? "---"} L",
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 36,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      )
-                    ],
-                  ),
-                  const SizedBox(height: 18),
-                  Text(
-                    "${latestReading!.liters.toStringAsFixed(1)} L",
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 36,
-                      fontWeight: FontWeight.bold,
+
+                        // 👇 THIS WILL NOW WRAP PROPERLY
+                        Text(
+                          "Updated: ${formatTime(latestReading?.timestamp)}",
+                          style: const TextStyle(
+                            color: Colors.white38,
+                            fontSize: 11,
+                          ),
+                          softWrap: true,
+                        ),
+
+
+                      ],
                     ),
                   ),
+
+                  // RIGHT SIDE (BUTTONS)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.orange,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(120, 35),
+                        ),
+                        onPressed: () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EditSensorNameScreen(
+                                deviceId: widget.deviceId,   // IMPORTANT: must be INT ID (1,2,3)
+                                sensorKey: widget.sensorPin, // A0, A3, etc
+                                currentLabel: widget.productName, // replace with real label if you have it
+                              ),
+                            ),
+                          );
+
+                          if (result == true) {
+                            fetchAllData(); // refresh UI after save
+                          }
+                        },
+                        child: const Text("Change Name"),
+                      ),
+
+                      const SizedBox(height: 8),
+
+                      ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueGrey,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(120, 35),
+                        ),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => SetCalibrationScreen(me: widget.me, activeCalibProfileId: widget.activeCalibProfileId, stationId: widget.stationId,),
+                            ),
+                          );
+                        },
+                        child: const Text("Set Lookup"),
+                      ),
+                    ],
+                  ),
                 ],
               ),
             ),
+            const SizedBox(height: 20),
+
 
             const SizedBox(height: 20),
 
-            // 🔥 RANGE DROPDOWN
+            // ================= HEADER =================
+
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              mainAxisAlignment:
+              MainAxisAlignment.spaceBetween,
+
               children: [
+
                 const Text(
                   "Tank Trend",
+
                   style: TextStyle(
                     color: Colors.orange,
                     fontSize: 18,
-                    fontWeight: FontWeight.bold,
+                    fontWeight:
+                    FontWeight.bold,
                   ),
                 ),
 
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.08),
-                    borderRadius: BorderRadius.circular(10),
+                  padding:
+                  const EdgeInsets.symmetric(
+                    horizontal: 12,
                   ),
+
+                  decoration: BoxDecoration(
+                    color:
+                    Colors.white.withOpacity(0.08),
+
+                    borderRadius:
+                    BorderRadius.circular(10),
+                  ),
+
                   child: DropdownButton<String>(
                     value: selectedRange,
-                    dropdownColor: const Color(0xFF1C2C34),
+
+                    dropdownColor:
+                    const Color(0xFF1C2C34),
+
                     underline: const SizedBox(),
-                    style: const TextStyle(color: Colors.white),
+
+                    style: const TextStyle(
+                      color: Colors.white,
+                    ),
 
                     items: ranges.map((range) {
                       return DropdownMenuItem(
                         value: range,
-                        child: Text(range.toUpperCase()),
+                        child: Text(
+                          range.toUpperCase(),
+                        ),
                       );
                     }).toList(),
 
                     onChanged: (value) {
-                      if (value == null) return;
+                      if (value == null) {
+                        return;
+                      }
 
                       setState(() {
                         selectedRange = value;
+
                         readings = [];
+
                         latestReading = null;
                       });
 
@@ -304,72 +451,121 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
 
             const SizedBox(height: 12),
 
-            // CHART
+            // ================= CHART =================
+
             Container(
+              height: 260,
+
               padding: const EdgeInsets.all(12),
+
               decoration: BoxDecoration(
                 color: Colors.white.withOpacity(0.05),
-                borderRadius: BorderRadius.circular(16),
+
+                borderRadius:
+                BorderRadius.circular(16),
               ),
-              height: 260,
+
               child: readings.length < 2
                   ? const Center(
                 child: Text(
                   "Not enough data",
-                  style: TextStyle(color: Colors.white70),
+
+                  style: TextStyle(
+                    color: Colors.white70,
+                  ),
                 ),
               )
                   : LineChart(
                 LineChartData(
                   minX: 0,
-                  maxX: readings.length.toDouble() - 1,
+
+                  maxX:
+                  readings.length.toDouble() - 1,
+
                   minY: getMinY(),
                   maxY: getMaxY(),
 
-                  gridData: const FlGridData(show: true),
-                  borderData: FlBorderData(show: false),
+                  gridData:
+                  const FlGridData(show: true),
+
+                  borderData:
+                  FlBorderData(show: false),
 
                   titlesData: FlTitlesData(
-                    rightTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
+
+                    rightTitles:
+                    const AxisTitles(
+                      sideTitles:
+                      SideTitles(
+                        showTitles: false,
+                      ),
                     ),
-                    topTitles: const AxisTitles(
-                      sideTitles: SideTitles(showTitles: false),
+
+                    topTitles:
+                    const AxisTitles(
+                      sideTitles:
+                      SideTitles(
+                        showTitles: false,
+                      ),
                     ),
+
                     leftTitles: AxisTitles(
                       sideTitles: SideTitles(
                         showTitles: true,
+
                         reservedSize: 42,
-                        getTitlesWidget: (value, meta) {
+
+                        getTitlesWidget:
+                            (value, meta) {
                           return Text(
-                            value.toInt().toString(),
-                            style: const TextStyle(
-                              color: Colors.white54,
+                            value
+                                .toInt()
+                                .toString(),
+
+                            style:
+                            const TextStyle(
+                              color:
+                              Colors.white54,
                               fontSize: 10,
                             ),
                           );
                         },
                       ),
                     ),
-                    bottomTitles: AxisTitles(
-                      sideTitles: SideTitles(
+
+                    bottomTitles:
+                    AxisTitles(
+                      sideTitles:
+                      SideTitles(
                         showTitles: true,
+
                         interval: 5,
-                        getTitlesWidget: (value, meta) {
-                          final index = value.toInt();
+
+                        getTitlesWidget:
+                            (value, meta) {
+
+                          final index =
+                          value.toInt();
 
                           if (index < 0 ||
-                              index >= readings.length) {
+                              index >=
+                                  readings.length) {
                             return const SizedBox();
                           }
 
                           final time =
-                              readings[index].timestamp;
+                              readings[index]
+                                  .timestamp;
 
                           return Text(
-                            "${time.hour}:${time.minute.toString().padLeft(2, '0')}",
-                            style: const TextStyle(
-                              color: Colors.white54,
+                            selectedRange == "all"
+                                ? "${time.hour}:${time.minute.toString().padLeft(2, '0')}"
+                                : "${time.month}/${time.day}",
+
+                            style:
+                            const TextStyle(
+                              color:
+                              Colors.white54,
                               fontSize: 10,
                             ),
                           );
@@ -379,12 +575,20 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
                   ),
 
                   lineBarsData: [
+
                     LineChartBarData(
                       spots: getSpots(),
+
                       isCurved: true,
+
                       color: Colors.orange,
+
                       barWidth: 3,
-                      dotData: const FlDotData(show: false),
+
+                      dotData:
+                      const FlDotData(
+                        show: false,
+                      ),
                     ),
                   ],
                 ),
@@ -392,12 +596,6 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
             ),
 
             const SizedBox(height: 20),
-
-            ElevatedButton.icon(
-              onPressed: fetchAllData,
-              icon: const Icon(Icons.refresh),
-              label: const Text("Refresh"),
-            ),
           ],
         ),
       ),
