@@ -130,19 +130,23 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
     final age = DateTime.now()
         .difference(latestReading!.timestamp);
 
+    debugPrint("NOW: ${DateTime.now()}");
+    debugPrint("READING: ${latestReading!.timestamp}");
+    debugPrint("AGE MINUTES: ${age.inMinutes}");
     if (age.inMinutes > 5) {
       return Colors.red;
     }
 
-    if (latestReading!.liters <= 0) {
-      return Colors.orange;
-    }
+    switch (latestReading!.status) {
+      case "dry_alert":
+        return Colors.orange;
 
-    if (latestReading!.liters < 2000) {
-      return Colors.orange;
-    }
+      case "normal":
+        return Colors.green;
 
-    return Colors.green;
+      default:
+        return Colors.grey;
+    }
   }
 
   String getStatusLabel() {
@@ -153,23 +157,24 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
     final age = DateTime.now()
         .difference(latestReading!.timestamp);
 
-    if (age.inMinutes < 0) {
-      return "Live";
-    }
-
     if (age.inMinutes > 5) {
       return "Offline";
     }
 
-    if (latestReading!.liters <= 0) {
-      return "No Flow";
+    if (latestReading!.refillAlert) {
+      return "Refill Alert";
     }
 
-    if (latestReading!.liters < 2000) {
-      return "Low";
-    }
+    switch (latestReading!.status) {
+      case "dry_alert":
+        return "Dry Alert";
 
-    return "Normal";
+      case "normal":
+        return "Normal";
+
+      default:
+        return "Unknown";
+    }
   }
 
   // ================= CHART =================
@@ -212,6 +217,36 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
         .clamp(0, double.infinity);
   }
 
+  List<VerticalLine> getEventLines() {
+    List<VerticalLine> lines = [];
+
+    for (int i = 0; i < readings.length; i++) {
+      final r = readings[i];
+
+      if (r.status == "dry_alert") {
+        lines.add(
+          VerticalLine(
+            x: i.toDouble(),
+            color: Colors.orange,
+            strokeWidth: 1,
+            dashArray: [5, 5],
+          ),
+        );
+      }
+
+      if (r.event == "refill") {
+        lines.add(
+          VerticalLine(
+            x: i.toDouble(),
+            color: Colors.blue,
+            strokeWidth: 2,
+          ),
+        );
+      }
+    }
+
+    return lines;
+  }
   // ================= UI =================
 
   @override
@@ -359,7 +394,7 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (_) => SetCalibrationScreen(me: widget.me, activeCalibProfileId: widget.activeCalibProfileId, stationId: widget.stationId,),
+                              builder: (_) => SetCalibrationScreen(me: widget.me, activeCalibProfileId: widget.activeCalibProfileId, stationId: widget.stationId, channelKey: widget.sensorPin,),
                             ),
                           );
                         },
@@ -372,8 +407,38 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
             ),
             const SizedBox(height: 20),
 
+            Container(
+              padding: const EdgeInsets.all(10),
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: Colors.white.withOpacity(0.05),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Row(
+                    children: [
+                      Icon(Icons.show_chart, color: Colors.orange, size: 14),
+                      SizedBox(width: 6),
+                      Text("Orange dashed line = Dry Alert",
+                          style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    ],
+                  ),
+                  SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.vertical_align_center, color: Colors.blue, size: 14),
+                      SizedBox(width: 6),
+                      Text("Blue line = Refill Alert",
+                          style: TextStyle(color: Colors.white70, fontSize: 12)),
+                    ],
+                  ),
+                ],
+              ),
+            ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 10),
 
             // ================= HEADER =================
 
@@ -454,7 +519,7 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
             // ================= CHART =================
 
             Container(
-              height: 260,
+              height: 450,
 
               padding: const EdgeInsets.all(12),
 
@@ -490,6 +555,10 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
 
                   borderData:
                   FlBorderData(show: false),
+
+                  extraLinesData: ExtraLinesData(
+                    verticalLines: getEventLines(),
+                  ),
 
                   titlesData: FlTitlesData(
 
@@ -595,7 +664,7 @@ class _TankDetailScreenState extends State<TankDetailScreen> {
               ),
             ),
 
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
           ],
         ),
       ),

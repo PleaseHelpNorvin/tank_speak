@@ -10,7 +10,9 @@ class SetCalibrationScreen extends StatefulWidget {
   final MeResponse me;
   final int? activeCalibProfileId;
   final int stationId;
-  const SetCalibrationScreen({super.key, required this.me, required this.activeCalibProfileId, required this.stationId});
+  final String channelKey;
+
+  const SetCalibrationScreen({super.key, required this.me, required this.activeCalibProfileId, required this.stationId, required this.channelKey});
 
 
   @override
@@ -39,6 +41,7 @@ class _SetCalibrationScreenState extends State<SetCalibrationScreen> {
     super.initState();
 
     activeCalibProfileId = widget.activeCalibProfileId;
+    debugPrint("🔥 SetCalibrationScreen channelKey: ${widget.channelKey}");
 
     loadActiveProfile();
     loadProfiles();
@@ -122,6 +125,9 @@ class _SetCalibrationScreenState extends State<SetCalibrationScreen> {
 
       // 🔥 RETURN RESULT TO PARENT SCREEN
       Navigator.pop(context, profileId);
+      Navigator.pop(context, profileId);
+      Navigator.pop(context, profileId);
+
 
     } catch (e) {
       if (!mounted) return;
@@ -183,11 +189,11 @@ class _SetCalibrationScreenState extends State<SetCalibrationScreen> {
         );
       },
     );
-
+    print("channel key: ${widget.channelKey}");
     if (result == true) {
       await setCalibrationProfile(
         deviceId: deviceId,
-        key: key,
+        key: widget.channelKey,
         profileId: profileId,
       );
     }
@@ -330,12 +336,10 @@ class _SetCalibrationScreenState extends State<SetCalibrationScreen> {
                       onTap: () {
                         confirmSetCalibration(
                           deviceId: widget.me.id,
-                          key: "A0",
+                          key: widget.channelKey,
                           profileId: item.id,
                           profileName: item.name,
                         );
-
-
                       },
 
                       child: Container(

@@ -86,47 +86,40 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
     }
   }
 
-  Map<String, dynamic> getFuelState(String key, double current) {
-    final previous = lastValues[key];
+  Map<String, dynamic> getFuelState(Map<String, dynamic> sensorData) {
+    final status = sensorData["status"] ?? "normal";
 
-    // 🔥 OFFLINE / NO DATA
-    if (current == 0) {
-      return {
-        "label": "OFFLINE",
-        "color": Colors.grey,
-      };
+    switch (status) {
+      case "dry_alert":
+        return {
+          "label": "DRY ALERT",
+          "color": Colors.red,
+        };
+
+      case "refill_alert":
+        return {
+          "label": "REFILL ALERT",
+          "color": Colors.blue,
+        };
+
+      case "no_profile":
+        return {
+          "label": "NO PROFILE",
+          "color": Colors.orange,
+        };
+
+      case "no_data":
+        return {
+          "label": "NO DATA",
+          "color": Colors.grey,
+        };
+
+      default:
+        return {
+          "label": "NORMAL",
+          "color": Colors.green,
+        };
     }
-
-    // first time baseline
-    if (previous == null) {
-      lastValues[key] = current;
-      return {
-        "label": "Normal",
-        "color": Colors.green,
-      };
-    }
-
-    final diff = current - previous;
-
-    // update stored value
-    lastValues[key] = current;
-
-    if (diff > 3) {
-      return {
-        "label": "Tank Fill Alert",
-        "color": Colors.blue,
-      };
-    } else if (diff < -2) {
-      return {
-        "label": "Dry Up Alert",
-        "color": Colors.red,
-      };
-    }
-
-    return {
-      "label": "Normal",
-      "color": Colors.green,
-    };
   }
 
   @override
@@ -345,7 +338,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                         ? activeCalibProfile
                         : int.tryParse(activeCalibProfile.toString());
                     debugPrint('activeCalibProfileId:  $activeCalibProfileId');
-                    final status = getFuelState(e.key, value);
+                    final status = getFuelState(sensorData);
                     debugPrint("label: $label");
                     return InkWell(
                       onTap: () {
@@ -360,7 +353,7 @@ class _StationDetailScreenState extends State<StationDetailScreen> {
                                   productName: label,
                                   deviceKey: firstDevice.device.deviceKey,
                                   activeCalibProfileId: activeCalibProfileId,
-                                  stationId: widget.station.id
+                                  stationId: widget.station.id,
                                 ),
                           ),
                         );

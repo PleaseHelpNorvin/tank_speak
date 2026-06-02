@@ -5,6 +5,10 @@ class DeviceReading {
   final double raw;
   final double liters;
 
+  final String status;
+  final String? event; // 👈 ADD THIS
+  final bool refillAlert;
+
   final DateTime timestamp;
 
   DeviceReading({
@@ -12,6 +16,10 @@ class DeviceReading {
     required this.sensorPin,
     required this.raw,
     required this.liters,
+    required this.status,
+    this.event,
+
+    required this.refillAlert,
     required this.timestamp,
   });
 
@@ -35,10 +43,13 @@ class DeviceReading {
       liters: litersValue is num
           ? litersValue.toDouble()
           : double.tryParse(litersValue.toString()) ?? 0,
+      status: json['status'] ?? "normal",
+      event: json['event'],
+      refillAlert: json['refill_alert'] ?? false,
 
       timestamp: DateTime.parse(
-        json['timestamp'],
-      ),
+        "${json['timestamp']}Z",
+      ).toLocal(),
     );
   }
 
