@@ -176,6 +176,12 @@
       "languageVersion": "3.9"
     },
     {
+      "name": "flutter_web_bluetooth",
+      "rootUri": "file:///C:/Users/Admin/AppData/Local/Pub/Cache/hosted/pub.dev/flutter_web_bluetooth-1.1.0",
+      "packageUri": "lib/",
+      "languageVersion": "3.3"
+    },
+    {
       "name": "flutter_web_plugins",
       "rootUri": "file:///C:/flutter%20sdk/flutter_windows_3.41.6-stable/flutter/packages/flutter_web_plugins",
       "packageUri": "lib/",

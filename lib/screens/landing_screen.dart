@@ -1,5 +1,11 @@
+
+// import 'dart:js_interop';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_blue_plus/flutter_blue_plus.dart';
+
+import 'package:tank_speak/services/web_bluetooth_service.dart';
 
 import 'auth/login_screen.dart';
 import 'pages/ble_provision_screen.dart';
@@ -20,7 +26,56 @@ class _LandingScreenState extends State<LandingScreen> {
   }
 
   /// 🔥 CHECK BLUETOOTH ON APP OPEN
+  // void checkBluetooth() async {
+  //   final state = await FlutterBluePlus.adapterState.first;
+  //
+  //   if (kIsWeb) {
+  //     print("Running on Web");
+  //     return;
+  //   }
+  //
+  //   if (state != BluetoothAdapterState.on) {
+  //     if (!mounted) return;
+  //
+  //     showDialog(
+  //       context: context,
+  //       barrierDismissible: false,
+  //       builder: (_) => AlertDialog(
+  //         title: const Text("Bluetooth Required"),
+  //         content: const Text(
+  //           "Please turn on Bluetooth to use BLE Provision feature.",
+  //         ),
+  //         actions: [
+  //           TextButton(
+  //             onPressed: () async {
+  //               Navigator.pop(context);
+  //
+  //               /// Android only
+  //               await FlutterBluePlus.turnOn();
+  //             },
+  //             child: const Text("Turn On"),
+  //           ),
+  //           TextButton(
+  //             onPressed: () {
+  //               Navigator.pop(context);
+  //             },
+  //             child: const Text("Cancel"),
+  //           ),
+  //         ],
+  //       ),
+  //     );
+  //   }
+  // }
+
   void checkBluetooth() async {
+
+    // If running in Chrome, don't use FlutterBluePlus
+    if (kIsWeb) {
+      print("Running on Web");
+      return;
+    }
+
+    // Android/iOS only
     final state = await FlutterBluePlus.adapterState.first;
 
     if (state != BluetoothAdapterState.on) {
@@ -38,8 +93,6 @@ class _LandingScreenState extends State<LandingScreen> {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context);
-
-                /// Android only
                 await FlutterBluePlus.turnOn();
               },
               child: const Text("Turn On"),
@@ -146,6 +199,51 @@ class _LandingScreenState extends State<LandingScreen> {
                 ),
 
                 const SizedBox(height: 10),
+
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text(
+                      "Test Web BLE",
+                      style: TextStyle(fontSize: 16),
+                    ),
+                      onPressed: () async {
+                        if (!kIsWeb) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text("Run this on Chrome")),
+                          );
+                          return;
+                        }
+
+                        try {
+                          final deviceName = await WebBluetoothService.requestDevice();
+
+                          if (!mounted) return;
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text("Connected to $deviceName"),
+                            ),
+                          );
+                        } catch (e) {
+                          if (!mounted) return;
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(e.toString()),
+                            ),
+                          );
+                        }
+                      }
+                  ),
+                ),
 
                 /// 🔥 BLE BUTTON
                 // SizedBox(
