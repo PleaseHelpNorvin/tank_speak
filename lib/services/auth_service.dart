@@ -11,9 +11,7 @@ class AuthService {
   bool isLoggedIn = false;
   String? token;
   String? type;
-  // =========================
-  // 🔐 LOGIN
-  // =========================
+
   Future<AuthResponse> login(String username, String password) async {
     final response = await _apiService.login(
       username: username,
@@ -29,9 +27,6 @@ class AuthService {
     return response;
   }
 
-  // =========================
-  // 💾 TOKEN STORAGE
-  // =========================
   Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString('token', token);
@@ -47,9 +42,6 @@ class AuthService {
     await prefs.remove('token');
   }
 
-  // =========================
-  // 🧪 REGISTER
-  // =========================
   Future<bool> register(
       String username,
       String name,
@@ -70,9 +62,6 @@ class AuthService {
     return response;
   }
 
-  // =========================
-  // 🚪 LOGOUT
-  // =========================
   Future<void> logout() async {
     isLoggedIn = false;
     token = null;

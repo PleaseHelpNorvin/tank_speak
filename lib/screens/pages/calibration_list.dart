@@ -352,7 +352,6 @@ class _CalibrationLookupTableScreenState
 
                 const SizedBox(width: 12),
 
-                // ================= IMPORT EXCEL (OUTLINED ORANGE) =================
                 Expanded(
                   child: OutlinedButton.icon(
                     onPressed: uploadExcel,

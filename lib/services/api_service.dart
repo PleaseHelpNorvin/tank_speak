@@ -14,11 +14,9 @@ import '../models/tank.dart';
 import 'mock_data.dart';
 
 class ApiService {
-  static const String baseUrl = "http://129.121.115.28:3123/api";
+  static const String baseUrl = "https://129.121.115.28/api";
 
-  // =========================
-  // 🔐 HEADERS (CORE FIX)
-  // =========================
+
   Future<Map<String, String>> _headers({bool auth = false}) async {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString('token');
@@ -41,7 +39,7 @@ class ApiService {
 
   Future<CreateCompanyResponse> createCompany(
       Map<String, dynamic> data,) async {
-    final url = Uri.parse("$baseUrl/company/d/create");
+    final url = Uri.parse("$baseUrl/company/create");
 
     final response = await http.post(
       url,
@@ -60,7 +58,7 @@ class ApiService {
 
 
   Future<PaginatedResponse<Company>> fetchCompanies({int page = 1}) async {
-    final url = Uri.parse("$baseUrl/companies?page=$page&size=10");
+    final url = Uri.parse("$baseUrl/company?page=$page&size=10");
 
     final response = await http.get(
       url,
@@ -104,7 +102,7 @@ class ApiService {
   Future<CreateGasStationResponse> createGasStation(int companyId,
       Map<String, dynamic> data,) async {
     final url = Uri.parse(
-      "$baseUrl/company/c/$companyId/station-create",
+      "$baseUrl/station/c/$companyId/station-create",
     );
 
     final response = await http.post(
@@ -144,7 +142,7 @@ class ApiService {
   }
 
   Future<StationDetailResponse> getStationById(int id) async {
-    final url = Uri.parse("$baseUrl/stations/g/$id");
+    final url = Uri.parse("$baseUrl/station/g/$id");
 
     final response = await http.get(
       url,
@@ -170,46 +168,6 @@ class ApiService {
 
     throw Exception("Failed to fetch station: ${response.body}");
   }
-
-  // Future<StationDetailResponse> getStationById(int id) async {
-  //   final url = Uri.parse("$baseUrl/stations/g/$id");
-  //
-  //   final response = await http.get(
-  //     url,
-  //     headers: await _headers(auth: true),
-  //   );
-  //
-  //   if (response.statusCode == 200) {
-  //     final body = jsonDecode(response.body);
-  //     return StationDetailResponse.fromJson(body);
-  //   }
-  //
-  //   throw Exception("Failed to fetch station: ${response.body}");
-  // }
-
-  // Future<DeviceReading> getDeviceReading({
-  //   required String deviceId,
-  //   required String sensorPin,
-  // }) async {
-  //   final encodedDeviceId = Uri.encodeComponent(deviceId);
-  //   final encodedPin = Uri.encodeComponent(sensorPin);
-  //
-  //   final url = Uri.parse(
-  //     "$baseUrl/device/$encodedDeviceId/$encodedPin/reading",
-  //   );
-  //
-  //   final response = await http.get(
-  //     url,
-  //     headers: await _headers(auth: true),
-  //   );
-  //
-  //   if (response.statusCode == 200) {
-  //     final json = jsonDecode(response.body);
-  //     return DeviceReading.fromJson(json);
-  //   }
-  //
-  //   throw Exception("Failed to get reading: ${response.body}");
-  // }
 
   Future<List<DeviceReading>> getDeviceReadings({
     required String deviceId,
@@ -293,7 +251,7 @@ class ApiService {
   // 🤝 INVITATIONS
   // =========================
   Future<PaginatedResponse<ReceivedInvitation>> fetchInvitations() async {
-    final url = Uri.parse("$baseUrl/invitations");
+    final url = Uri.parse("$baseUrl/invite");
 
     final response = await http.get(
       url,
@@ -306,7 +264,7 @@ class ApiService {
       return PaginatedResponse<ReceivedInvitation>.fromJson(
         body,
             (e) => ReceivedInvitation.fromJson(e),
-        "recieved_invitations",
+        "received_invitations",
       );
     }
 
@@ -314,7 +272,7 @@ class ApiService {
   }
 
   Future<Invitation> searchInvitation(String code) async {
-    final url = Uri.parse("$baseUrl/invitations/search/$code");
+    final url = Uri.parse("$baseUrl/invite/search/$code");
 
     final response = await http.get(
       url,
@@ -460,7 +418,7 @@ class ApiService {
   Future<CreateCalibrationProfileResponse> createCalibrationProfile({
     required String name,
   }) async {
-    final url = Uri.parse("$baseUrl/calibration/create?name=$name");
+    final url = Uri.parse("$baseUrl/calibration/profile-create?name=$name");
 
     final response = await http.post(
       url,
@@ -586,7 +544,6 @@ class ApiService {
     request.fields['device_calibration_profile_id'] =
         profileId.toString();
 
-    // file field
     request.files.add(
       await http.MultipartFile.fromPath(
         'file',
