@@ -1,0 +1,24 @@
+{
+ "status": 200,
+ "body": {
+  "id": 22,
+  "username": "manager3",
+  "name": "manager3",
+  "email": "manager3",
+  "invite_code": "9560105675",
+  "owner": [],
+  "manager": [
+   {
+    "id": 13,
+    "address": "`testt request id22",
+    "business_hours": "123123",
+    "created_at": "2026-10-05T09:58:46.745247",
+    "phone": "testt request id22",
+    "name": "testt request id2te2",
+    "company_id": 8,
+    "extended_business_hours": null,
+    "updated_at": "2026-10-05T09:58:46.745251"
+   }
+  ]
+ }
+}

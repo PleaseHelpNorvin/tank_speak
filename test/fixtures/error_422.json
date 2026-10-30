@@ -1,0 +1,40 @@
+{
+ "status": 422,
+ "body": {
+  "detail": [
+   {
+    "type": "missing",
+    "loc": [
+     "body",
+     "address"
+    ],
+    "msg": "Field required",
+    "input": {
+     "name": "x"
+    }
+   },
+   {
+    "type": "missing",
+    "loc": [
+     "body",
+     "business_hours"
+    ],
+    "msg": "Field required",
+    "input": {
+     "name": "x"
+    }
+   },
+   {
+    "type": "missing",
+    "loc": [
+     "body",
+     "phone"
+    ],
+    "msg": "Field required",
+    "input": {
+     "name": "x"
+    }
+   }
+  ]
+ }
+}

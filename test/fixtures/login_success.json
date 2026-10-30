@@ -1,0 +1,8 @@
+{
+ "status": 200,
+ "body": {
+  "success": true,
+  "token": "test-token",
+  "type": "Bearer"
+ }
+}

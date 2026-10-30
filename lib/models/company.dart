@@ -1,79 +1,97 @@
+import '../core/json_utils.dart';
 import 'gas_station.dart';
 
 class Company {
-  final int? id;
-  final String name;
-  final String address;
-  final String phone;
-  final String businessHours;
-  final String extendedBusinessHours;
-
   Company({
-    this.id,
+    required this.id,
     required this.name,
     required this.address,
     required this.phone,
     required this.businessHours,
-    required this.extendedBusinessHours,
+    this.extendedBusinessHours,
   });
+
+  final int id;
+  final String name;
+  final String address;
+  final String phone;
+  final String businessHours;
+  final String? extendedBusinessHours;
 
   factory Company.fromJson(Map<String, dynamic> json) {
     return Company(
-      id: json['id'],
-      name: json['name'] ?? '',
-      address: json['address'] ?? '',
-      phone: json['phone'] ?? '',
-      businessHours: json['business_hours'] ?? '',
-      extendedBusinessHours: json['extended_business_hours'] ?? '',
+      id: asInt(json['id']) ?? 0,
+      name: asString(json['name']) ?? '',
+      address: asString(json['address']) ?? '',
+      phone: asString(json['phone']) ?? '',
+      businessHours: asString(json['business_hours']) ?? '',
+      extendedBusinessHours: asText(json['extended_business_hours']),
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      "id": id,
-      "name": name,
-      "address": address,
-      "phone": phone,
-      "business_hours": businessHours,
-      "ex_business_hour": extendedBusinessHours,
-    };
   }
 }
 
+class ContactPerson {
+  ContactPerson({
+    required this.id,
+    required this.name,
+    this.position,
+    this.phone,
+    this.email,
+  });
+
+  final int id;
+  final String name;
+  final String? position;
+  final String? phone;
+  final String? email;
+
+  factory ContactPerson.fromJson(Map<String, dynamic> json) {
+    return ContactPerson(
+      id: asInt(json['id']) ?? 0,
+      name: asString(json['name']) ?? '',
+      position: asText(json['position']),
+      phone: asText(json['phone']),
+      email: asText(json['email']),
+    );
+  }
+}
+
+/// `GET /api/company/c/{company_id}`.
+///
+/// `stations` is already scoped by the backend: company owners see every
+/// station, station-level members only their own.
 class CompanyDetailResponse {
-  final Company company;
-  final List<GasStation> stations;
-
-
   CompanyDetailResponse({
     required this.company,
     required this.stations,
+    required this.contacts,
   });
 
+  final Company company;
+  final List<GasStation> stations;
+  final List<ContactPerson> contacts;
 
   factory CompanyDetailResponse.fromJson(Map<String, dynamic> json) {
     return CompanyDetailResponse(
-      company: Company.fromJson(json['company']),
-      stations: (json['stations'] as List<dynamic>? ?? [])
-          .map((e) => GasStation.fromJson(e))
-          .toList(),
+      company: Company.fromJson(asMap(json['company'])),
+      stations: asMapList(json['stations']).map(GasStation.fromJson).toList(),
+      contacts:
+          asMapList(json['contacts']).map(ContactPerson.fromJson).toList(),
     );
   }
 }
 
+/// `POST /api/company/create` response.
 class CreateCompanyResponse {
+  CreateCompanyResponse({required this.message, required this.company});
+
   final String message;
   final Company company;
 
-  CreateCompanyResponse({
-    required this.message,
-    required this.company,
-  });
-
   factory CreateCompanyResponse.fromJson(Map<String, dynamic> json) {
     return CreateCompanyResponse(
-      message: json['message'] ?? '',
-      company: Company.fromJson(json['company']),
+      message: asString(json['message']) ?? 'Company created',
+      company: Company.fromJson(asMap(json['company'])),
     );
   }
 }

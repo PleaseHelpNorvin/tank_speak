@@ -1,21 +1,32 @@
 import 'package:flutter/material.dart';
-import 'package:tank_speak/screens/pages/invitations_screen.dart';
-import 'package:tank_speak/screens/pages/profile_screen.dart';
-import 'package:tank_speak/screens/pages/splash_screen.dart';
-import '../../services/api_service.dart';
-import '../../models/me_response.dart';
 
+import '../../models/me_response.dart';
+import '../../services/company_service.dart';
+import '../../widgets/app_theme.dart';
+import '../../widgets/state_views.dart';
+import 'invitations_screen.dart';
+import 'profile_screen.dart';
+import 'splash_screen.dart';
+
+/// `POST /api/company/create`. The creating user becomes the company owner.
 class CreateCompanyScreen extends StatefulWidget {
   final MeResponse me;
 
-  const CreateCompanyScreen({super.key, required this.me});
+  /// True when shown at start-up to a user without any company.
+  final bool isOnboarding;
+
+  const CreateCompanyScreen({
+    super.key,
+    required this.me,
+    this.isOnboarding = false,
+  });
 
   @override
   State<CreateCompanyScreen> createState() => _CreateCompanyScreenState();
 }
 
 class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
-  final ApiService api = ApiService();
+  final CompanyService _companies = CompanyService();
 
   final _formKey = GlobalKey<FormState>();
 
@@ -33,62 +44,58 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
     setState(() => isLoading = true);
 
     try {
-      final response = await api.createCompany({
-        "name": nameController.text.trim(),
-        "address": addressController.text.trim(),
-        "phone": phoneController.text.trim(),
-        "business_hours": businessHoursController.text.trim(),
-        "ex_business_hour": extendedHoursController.text.trim(),
-      });
+      final response = await _companies.createCompany(
+        name: nameController.text,
+        address: addressController.text,
+        phone: phoneController.text,
+        businessHours: businessHoursController.text,
+        extendedBusinessHours: extendedHoursController.text,
+      );
 
       if (!mounted) return;
+      showSuccess(context, response.message);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(response.message)),
-      );
-
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const SplashScreen()),
-            (route) => false,
-      );
+      if (widget.isOnboarding) {
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (_) => const SplashScreen()),
+          (route) => false,
+        );
+      } else {
+        Navigator.pop(context, true);
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+      if (!mounted) return;
+      showError(context, e);
     } finally {
-      setState(() => isLoading = false);
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
   Widget inputField(
-      String label,
-      TextEditingController controller, {
-        TextInputType type = TextInputType.text,
-        int maxLines = 1,
-      }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: type,
-      maxLines: maxLines,
-      style: const TextStyle(color: Colors.white),
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "$label is required";
-        }
-        return null;
-      },
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: const TextStyle(color: Colors.white70),
-        filled: true,
-        fillColor: Colors.white.withOpacity(0.08),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.2)),
-          borderRadius: BorderRadius.circular(12),
+    String label,
+    TextEditingController controller, {
+    TextInputType type = TextInputType.text,
+    int maxLines = 1,
+    bool required = true,
+    IconData? icon,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextFormField(
+        controller: controller,
+        keyboardType: type,
+        maxLines: maxLines,
+        textInputAction: TextInputAction.next,
+        validator: (value) {
+          if (required && (value == null || value.trim().isEmpty)) {
+            return "$label is required";
+          }
+          return null;
+        },
+        decoration: InputDecoration(
+          labelText: required ? label : '$label (optional)',
+          prefixIcon: icon == null ? null : Icon(icon),
         ),
       ),
     );
@@ -107,80 +114,82 @@ class _CreateCompanyScreenState extends State<CreateCompanyScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F2027),
-
       appBar: AppBar(
-        title: const Text("Create Company"),
-        backgroundColor: const Color(0xFF0F2027),
-        foregroundColor: Colors.white,
+        title: const Text("New company"),
+        automaticallyImplyLeading: !widget.isOnboarding,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.email),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) =>  InvitationsScreen(me: widget.me)),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) =>  ProfileScreen(me: widget.me)),
-              );
-            },
-          ),
-
+          if (widget.isOnboarding) ...[
+            IconButton(
+              tooltip: 'Invitations',
+              icon: const Icon(Icons.mail_outline),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => InvitationsScreen(
+                          me: widget.me, isOnboarding: true)),
+                );
+              },
+            ),
+            IconButton(
+              tooltip: 'Profile',
+              icon: const Icon(Icons.person_outline),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => ProfileScreen(me: widget.me)),
+                );
+              },
+            ),
+          ],
         ],
       ),
-
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              inputField("Company Name", nameController),
-              const SizedBox(height: 12),
-
-              inputField("Address", addressController, maxLines: 2),
-              const SizedBox(height: 12),
-
-              inputField(
-                "Phone",
-                phoneController,
-                type: TextInputType.phone,
-              ),
-              const SizedBox(height: 12),
-
-              inputField("Business Hours", businessHoursController),
-              const SizedBox(height: 12),
-
-              inputField("Extended Business Hours", extendedHoursController),
-              const SizedBox(height: 20),
-
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (widget.isOnboarding) ...[
+                  const InfoBanner(
+                    message: "You don't belong to a company yet. Create one "
+                        "to become its owner, or open Invitations if someone "
+                        "invited you to their station.",
                   ),
+                  const SizedBox(height: 20),
+                ],
+                Text('Company details', style: context.text.titleMedium),
+                const SizedBox(height: 4),
+                Text('You will be the owner of this company.',
+                    style: context.text.bodyMedium
+                        ?.copyWith(color: context.colors.onSurfaceVariant)),
+                const SizedBox(height: 20),
+                inputField("Company name", nameController,
+                    icon: Icons.apartment_outlined),
+                inputField("Address", addressController,
+                    maxLines: 2, icon: Icons.location_on_outlined),
+                inputField("Phone", phoneController,
+                    type: TextInputType.phone, icon: Icons.phone_outlined),
+                inputField("Business hours", businessHoursController,
+                    icon: Icons.schedule_outlined),
+                inputField("Extended business hours", extendedHoursController,
+                    required: false, icon: Icons.more_time),
+                const SizedBox(height: 12),
+                FilledButton(
                   onPressed: isLoading ? null : createCompany,
                   child: isLoading
-                      ? const CircularProgressIndicator(color: Colors.white)
-                      : const Text(
-                    "Create Company",
-                    style: TextStyle(fontSize: 16),
-                  ),
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : const Text("Create company"),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

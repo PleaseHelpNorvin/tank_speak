@@ -1,132 +1,69 @@
+import '../core/json_utils.dart';
+
+/// A calibration ("lookup") profile: level -> volume table shared by
+/// channels. Calibration math is done by the backend; the app only displays
+/// profiles and assigns them to channels.
 class CalibrationProfile {
+  CalibrationProfile({required this.id, required this.name, this.percentage});
+
   final int id;
   final String name;
 
-  CalibrationProfile({
-    required this.id,
-    required this.name,
-  });
+  /// Low-level threshold percentage, when the endpoint includes it.
+  final double? percentage;
 
   factory CalibrationProfile.fromJson(Map<String, dynamic> json) {
     return CalibrationProfile(
-      id: json['id'],
-      name: json['name'],
-    );
-  }
-
-  static List<CalibrationProfile> listFromJson(List<dynamic> jsonList) {
-    return jsonList
-        .map((e) => CalibrationProfile.fromJson(e))
-        .toList();
-  }
-}
-
-
-class CreateCalibrationProfileResponse {
-  final String message;
-  final CalibrationProfile profile;
-
-  CreateCalibrationProfileResponse({
-    required this.message,
-    required this.profile,
-  });
-
-  factory CreateCalibrationProfileResponse.fromJson(Map<String, dynamic> json) {
-    return CreateCalibrationProfileResponse(
-      message: json['message'] ?? '',
-      profile: CalibrationProfile.fromJson(json['profile']),
+      id: asInt(json['id']) ?? 0,
+      name: asString(json['name']) ?? '',
+      percentage: asDouble(json['percentage']),
     );
   }
 }
 
+/// One row of a calibration table.
 class CalibrationEntry {
-  final int id;
-  final int deviceCalibrationProfileId;
-
-  final double? dipstickLiters;
-  final double? actualLiters;
-  final double? volumeLiters;
-
-  final int level;
-
-  final double? lengthCm;
-  final double? radiusCm;
-
-  final String createdAt;
-
   CalibrationEntry({
     required this.id,
-    required this.deviceCalibrationProfileId,
-    required this.dipstickLiters,
-    required this.actualLiters,
-    required this.volumeLiters,
     required this.level,
-    required this.lengthCm,
-    required this.radiusCm,
-    required this.createdAt,
+    this.dipstickLiters,
+    this.volumeLiters,
+    this.actualLiters,
   });
+
+  final int id;
+  final double level;
+  final double? dipstickLiters;
+  final double? volumeLiters;
+  final double? actualLiters;
 
   factory CalibrationEntry.fromJson(Map<String, dynamic> json) {
     return CalibrationEntry(
-      id: (json['id'] as num).toInt(),
-
-      deviceCalibrationProfileId:
-      (json['device_calibration_profile_id'] as num)
-          .toInt(),
-
-      dipstickLiters:
-      (json['dipstick_liters'] as num?)
-          ?.toDouble(),
-
-      actualLiters:
-      (json['actual_liters'] as num?)
-          ?.toDouble(),
-
-      volumeLiters:
-      (json['volume_liters'] as num?)
-          ?.toDouble(),
-
-      level:
-      (json['level'] as num?)?.toInt() ?? 0,
-
-      lengthCm:
-      (json['length_cm'] as num?)
-          ?.toDouble(),
-
-      radiusCm:
-      (json['radius_cm'] as num?)
-          ?.toDouble(),
-
-      createdAt: json['created_at'] ?? '',
+      id: asInt(json['id']) ?? 0,
+      level: asDouble(json['level']) ?? 0,
+      dipstickLiters: asDouble(json['dipstick_liters']),
+      volumeLiters: asDouble(json['volume_liters']),
+      actualLiters: asDouble(json['actual_liters']),
     );
-  }
-
-  static List<CalibrationEntry> listFromJson(
-      List<dynamic> jsonList,
-      ) {
-    return jsonList
-        .map((e) => CalibrationEntry.fromJson(e))
-        .toList();
   }
 }
 
+/// `GET /api/calibration/profile/{profile_id}`.
 class CalibrationProfileDetailResponse {
-  final CalibrationProfile profile;
-  final List<CalibrationEntry> calibrations;
-
   CalibrationProfileDetailResponse({
     required this.profile,
     required this.calibrations,
   });
 
-  factory CalibrationProfileDetailResponse.fromJson(
-      Map<String, dynamic> json,
-      ) {
+  final CalibrationProfile profile;
+  final List<CalibrationEntry> calibrations;
+
+  factory CalibrationProfileDetailResponse.fromJson(Map<String, dynamic> json) {
     return CalibrationProfileDetailResponse(
-      profile: CalibrationProfile.fromJson(json['profile']),
-      calibrations: CalibrationEntry.listFromJson(
-        json['calibrations'] ?? [],
-      ),
+      profile: CalibrationProfile.fromJson(asMap(json['profile'])),
+      calibrations: asMapList(json['calibrations'])
+          .map(CalibrationEntry.fromJson)
+          .toList(),
     );
   }
 }

@@ -1,68 +1,77 @@
 import 'package:flutter/material.dart';
-import 'package:tank_speak/screens/pages/create_calibration_profile_screen.dart';
-import '../../models/me_response.dart';
-import '../../services/api_service.dart';
+
 import '../../models/calibration_profile.dart';
+import '../../models/me_response.dart';
+import '../../services/calibration_service.dart';
+import '../../services/device_service.dart';
+import '../../widgets/app_theme.dart';
 import '../../widgets/pagination_bar.dart';
+import '../../widgets/state_views.dart';
 import 'calibration_list.dart';
 
+/// Assigns a lookup table to one device channel through
+/// `POST /api/device-channel/{device_id}/channel-calibration`.
+/// Pops with the assigned profile id.
 class SetCalibrationScreen extends StatefulWidget {
   final MeResponse me;
+  final int deviceId;
   final int? activeCalibProfileId;
   final int stationId;
   final String channelKey;
 
-  const SetCalibrationScreen({super.key, required this.me, required this.activeCalibProfileId, required this.stationId, required this.channelKey});
-
+  const SetCalibrationScreen({
+    super.key,
+    required this.me,
+    required this.deviceId,
+    required this.activeCalibProfileId,
+    required this.stationId,
+    required this.channelKey,
+  });
 
   @override
   State<SetCalibrationScreen> createState() => _SetCalibrationScreenState();
 }
 
 class _SetCalibrationScreenState extends State<SetCalibrationScreen> {
-  final ApiService api = ApiService();
+  final CalibrationService _calibration = CalibrationService();
+  final DeviceService _devices = DeviceService();
+
+  static const int pageSize = 20;
 
   CalibrationProfile? activeProfile;
   bool loadingActiveProfile = true;
 
   bool isLoading = true;
-  String? error;
+  bool saving = false;
+  Object? error;
 
   List<CalibrationProfile> profiles = [];
-
   int currentPage = 1;
-  int pageSize = 10;
   int total = 0;
-
-  int? activeCalibProfileId;
 
   @override
   void initState() {
     super.initState();
-
-    activeCalibProfileId = widget.activeCalibProfileId;
-    debugPrint("🔥 SetCalibrationScreen channelKey: ${widget.channelKey}");
-
     loadActiveProfile();
     loadProfiles();
   }
 
   Future<void> loadActiveProfile() async {
-    if (activeCalibProfileId == null) {
+    final id = widget.activeCalibProfileId;
+    if (id == null) {
       setState(() => loadingActiveProfile = false);
       return;
     }
 
     try {
-      final result = await api.getActiveCalibrationProfileById(
-        activeCalibProfileId!,
-      );
-
+      final result = await _calibration.getProfileSummary(id);
+      if (!mounted) return;
       setState(() {
         activeProfile = result;
         loadingActiveProfile = false;
       });
-    } catch (e) {
+    } catch (_) {
+      if (!mounted) return;
       setState(() {
         activeProfile = null;
         loadingActiveProfile = false;
@@ -77,11 +86,9 @@ class _SetCalibrationScreenState extends State<SetCalibrationScreen> {
     });
 
     try {
-      final result = await api.fetchCalibrationProfiles(
-        page: page,
-        size: pageSize,
-      );
-
+      final result =
+          await _calibration.fetchProfiles(page: page, size: pageSize);
+      if (!mounted) return;
       setState(() {
         profiles = result.items;
         currentPage = result.page;
@@ -89,316 +96,200 @@ class _SetCalibrationScreenState extends State<SetCalibrationScreen> {
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        error = e.toString();
+        error = e;
         isLoading = false;
       });
     }
   }
 
-  Future<void> setCalibrationProfile({
-    required int deviceId,
-    required String key,
-    required int profileId,
-  }) async {
-    try {
-      await api.setChannelCalibration(
-        deviceId: deviceId,
-        key: key,
-        calibrationProfileId: profileId,
-      );
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Calibration updated successfully")),
-      );
-
-      // 🔥 UPDATE STATE FIRST
-      setState(() {
-        activeCalibProfileId = profileId;
-        loadingActiveProfile = true;
-      });
-
-      // 🔥 RELOAD FROM API (this is the real truth)
-      await loadActiveProfile();
-
-      // 🔥 RETURN RESULT TO PARENT SCREEN
-      Navigator.pop(context, profileId);
-      Navigator.pop(context, profileId);
-      Navigator.pop(context, profileId);
-
-
-    } catch (e) {
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
-    }
-  }
-
-  CalibrationProfile? getActiveProfile() {
-    if (widget.activeCalibProfileId == null) return null;
-
-    try {
-      return profiles.firstWhere(
-            (p) => p.id == widget.activeCalibProfileId,
-      );
-    } catch (e) {
-      return null;
-    }
-  }
-
-  Future<void> confirmSetCalibration({
-    required int deviceId,
-    required String key,
-    required int profileId,
-    required String profileName,
-  }) async {
+  Future<void> confirmSetCalibration(CalibrationProfile profile) async {
     final result = await showDialog<bool>(
       context: context,
       builder: (context) {
         return AlertDialog(
-          backgroundColor: const Color(0xFF1C2C34),
-          title: const Text(
-            "Confirm Calibration",
-            style: TextStyle(color: Colors.white),
-          ),
+          icon: const Icon(Icons.table_chart_outlined),
+          title: const Text("Use this lookup table?"),
           content: Text(
-            "Set \"$profileName\" as calibration profile for channel $key?",
-            style: const TextStyle(color: Colors.white70),
+            "Use \"${profile.name}\" for channel ${widget.channelKey}? "
+            "Volumes for this channel will be calculated with it.",
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
-              child: const Text(
-                "Cancel",
-                style: TextStyle(color: Colors.grey),
-              ),
+              child: const Text("Cancel"),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                foregroundColor: Colors.white,
-              ),
+            FilledButton(
+              style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
               onPressed: () => Navigator.pop(context, true),
-              child: const Text("Confirm"),
+              child: const Text("Use it"),
             ),
           ],
         );
       },
     );
-    print("channel key: ${widget.channelKey}");
-    if (result == true) {
-      await setCalibrationProfile(
-        deviceId: deviceId,
-        key: widget.channelKey,
-        profileId: profileId,
+
+    if (result != true || !mounted) return;
+
+    setState(() => saving = true);
+    try {
+      await _devices.setChannelCalibration(
+        deviceId: widget.deviceId,
+        channelKey: widget.channelKey,
+        calibrationProfileId: profile.id,
       );
+      if (!mounted) return;
+      showSuccess(context, "Lookup table updated");
+      Navigator.pop(context, profile.id);
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => saving = false);
+      showError(context, e);
     }
   }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F2027),
-
       appBar: AppBar(
-        title: const Text("Set Look up "),
-        backgroundColor: const Color(0xFF0F2027),
-        foregroundColor: Colors.white,
+        title: Text("Lookup for ${widget.channelKey}"),
         actions: [
           IconButton(
+            tooltip: 'Refresh',
             icon: const Icon(Icons.refresh),
-            onPressed: () => loadProfiles(page: currentPage),
+            onPressed: isLoading ? null : () => loadProfiles(page: currentPage),
           ),
         ],
       ),
-      // floatingActionButton: FloatingActionButton(
-      //   backgroundColor: Colors.orange,
-      //   onPressed: () {
-      //     Navigator.push(
-      //       context,
-      //       MaterialPageRoute(
-      //         builder: (_) => CreateCalibrationProfileScreen(me: widget.me),
-      //       ),
-      //     );
-      //   },
-      //   child: const Icon(Icons.add),
-      // ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : error != null
-          ? Center(
-        child: Text(
-          error!,
-          style: const TextStyle(color: Colors.red),
-          textAlign: TextAlign.center,
-        ),
-      )
-          : Column(
+      body: Stack(
         children: [
-
-          if (loadingActiveProfile)
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: CircularProgressIndicator(),
-            )
-          else if (activeProfile != null)
+          _body(),
+          if (saving)
             Container(
-              margin: const EdgeInsets.all(12),
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: Colors.orange.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.orange),
-              ),
-              child: Row(
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.orange),
-                  const SizedBox(width: 10),
-
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          "Active Calibration Profile",
-                          style: TextStyle(
-                            color: Colors.orange,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          activeProfile!.name,
-                          style: const TextStyle(color: Colors.white),
-                        ),
-                        Text(
-                          "ID: ${activeProfile!.id}",
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.6),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            )
-          else
-            const Padding(
-              padding: EdgeInsets.all(12),
-              child: Text(
-                "No active calibration profile",
-                style: TextStyle(color: Colors.white54),
-              ),
+              color: Colors.black26,
+              child: const LoadingView(message: 'Saving...'),
             ),
-          // ================= PAGINATION BAR =================
-          PaginationBar(
-            currentPage: currentPage,
-            total: total,
-            pageSize: pageSize,
-            onPrev: () {
-              if (currentPage > 1) {
-                loadProfiles(page: currentPage - 1);
-              }
-            },
-            onNext: () {
-              final maxPage = (total / pageSize).ceil();
-              if (currentPage < maxPage) {
-                loadProfiles(page: currentPage + 1);
-              }
-            },
-          ),
+        ],
+      ),
+    );
+  }
 
-          // ================= LIST =================
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                await loadProfiles(page: currentPage);
-              },
-              child: profiles.isEmpty
-                  ? const Center(
-                child: Text(
-                  "No calibration profiles found",
-                  style: TextStyle(color: Colors.white70),
-                ),
-              )
-                  : ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: profiles.length,
-                itemBuilder: (context, index) {
-                  final item = profiles[index];
+  Widget _body() {
+    if (isLoading && profiles.isEmpty) return const LoadingView();
+    if (error != null && profiles.isEmpty) {
+      return ErrorView(
+          error: error!, onRetry: () => loadProfiles(page: currentPage));
+    }
 
-                  return GestureDetector(
-                      onTap: () {
-                        confirmSetCalibration(
-                          deviceId: widget.me.id,
-                          key: widget.channelKey,
-                          profileId: item.id,
-                          profileName: item.name,
-                        );
-                      },
+    final activeId = activeProfile?.id ?? widget.activeCalibProfileId;
 
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.06),
-                          borderRadius: BorderRadius.circular(14),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.08),
-                          ),
-                        ),
-                        child: Row(
+    return Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+          child: loadingActiveProfile
+              ? const LinearProgressIndicator()
+              : AppCard(
+                  margin: EdgeInsets.zero,
+                  color: context.colors.primaryContainer,
+                  borderColor: Colors.transparent,
+                  child: Row(
+                    children: [
+                      Icon(
+                        activeProfile != null
+                            ? Icons.check_circle
+                            : Icons.info_outline,
+                        color: context.colors.onPrimaryContainer,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Icon(
-                              Icons.science,
-                              color: Colors.orange,
-                            ),
-                            const SizedBox(width: 12),
-
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    item.name,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 4),
-                                  Text(
-                                    "ID: ${item.id}",
-                                    style: TextStyle(
-                                      color: Colors.white
-                                          .withOpacity(0.6),
-                                      fontSize: 12,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            const Icon(
-                              Icons.chevron_right,
-                              color: Colors.white54,
+                            Text("Current lookup table",
+                                style: context.text.labelMedium?.copyWith(
+                                    color: context.colors.onPrimaryContainer)),
+                            const SizedBox(height: 2),
+                            Text(
+                              activeProfile?.name ??
+                                  "None — raw sensor values are shown",
+                              style: context.text.titleSmall?.copyWith(
+                                  color: context.colors.onPrimaryContainer),
                             ),
                           ],
                         ),
-                      )
-                  );
-                },
-              ),
-            ),
+                      ),
+                    ],
+                  ),
+                ),
+        ),
+        PaginationBar(
+          currentPage: currentPage,
+          total: total,
+          pageSize: pageSize,
+          onPrev: () => loadProfiles(page: currentPage - 1),
+          onNext: () => loadProfiles(page: currentPage + 1),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => loadProfiles(page: currentPage),
+            child: profiles.isEmpty
+                ? ListView(children: const [
+                    SizedBox(height: 80),
+                    EmptyView(
+                      icon: Icons.table_chart_outlined,
+                      title: 'No lookup tables available',
+                    ),
+                  ])
+                : ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(20, 4, 20, 24),
+                    itemCount: profiles.length,
+                    itemBuilder: (context, index) {
+                      final item = profiles[index];
+                      final isActive = item.id == activeId;
+                      return AppCard(
+                        padding: const EdgeInsets.fromLTRB(14, 8, 8, 8),
+                        margin: const EdgeInsets.only(bottom: 10),
+                        borderColor:
+                            isActive ? context.colors.primary : null,
+                        onTap:
+                            isActive ? null : () => confirmSetCalibration(item),
+                        child: Row(
+                          children: [
+                            const IconTile(Icons.science_outlined, size: 40),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(item.name,
+                                  style: context.text.titleSmall),
+                            ),
+                            if (isActive)
+                              StatusPill(
+                                  label: 'In use',
+                                  color: context.colors.primary,
+                                  icon: Icons.check),
+                            IconButton(
+                              tooltip: 'View table',
+                              icon: const Icon(Icons.visibility_outlined),
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) =>
+                                        CalibrationLookupTableScreen(
+                                            profileId: item.id),
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

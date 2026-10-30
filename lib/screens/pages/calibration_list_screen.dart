@@ -1,13 +1,18 @@
 import 'package:flutter/material.dart';
-import 'package:tank_speak/screens/pages/create_calibration_profile_screen.dart';
-import '../../models/me_response.dart';
-import '../../services/api_service.dart';
+
 import '../../models/calibration_profile.dart';
+import '../../models/me_response.dart';
+import '../../services/calibration_service.dart';
+import '../../widgets/app_theme.dart';
 import '../../widgets/pagination_bar.dart';
+import '../../widgets/state_views.dart';
 import 'calibration_list.dart';
 
+/// Lists the calibration (lookup) profiles available for tank channels.
+/// Read-only: profiles are maintained in the web administration portal.
 class CalibrationListScreen extends StatefulWidget {
   final MeResponse me;
+
   const CalibrationListScreen({super.key, required this.me});
 
   @override
@@ -15,15 +20,14 @@ class CalibrationListScreen extends StatefulWidget {
 }
 
 class _CalibrationListScreenState extends State<CalibrationListScreen> {
-  final ApiService api = ApiService();
+  final CalibrationService _calibration = CalibrationService();
+
+  static const int pageSize = 20;
 
   bool isLoading = true;
-  String? error;
-
+  Object? error;
   List<CalibrationProfile> profiles = [];
-
   int currentPage = 1;
-  int pageSize = 10;
   int total = 0;
 
   @override
@@ -39,11 +43,9 @@ class _CalibrationListScreenState extends State<CalibrationListScreen> {
     });
 
     try {
-      final result = await api.fetchCalibrationProfiles(
-        page: page,
-        size: pageSize,
-      );
-
+      final result =
+          await _calibration.fetchProfiles(page: page, size: pageSize);
+      if (!mounted) return;
       setState(() {
         profiles = result.items;
         currentPage = result.page;
@@ -51,8 +53,9 @@ class _CalibrationListScreenState extends State<CalibrationListScreen> {
         isLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
-        error = e.toString();
+        error = e;
         isLoading = false;
       });
     }
@@ -61,150 +64,80 @@ class _CalibrationListScreenState extends State<CalibrationListScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F2027),
-
       appBar: AppBar(
-        title: const Text("Calibration Profiles"),
-        backgroundColor: const Color(0xFF0F2027),
-        foregroundColor: Colors.white,
+        title: const Text("Lookup Tables"),
         actions: [
           IconButton(
+            tooltip: 'Refresh',
             icon: const Icon(Icons.refresh),
-            onPressed: () => loadProfiles(page: currentPage),
+            onPressed: isLoading ? null : () => loadProfiles(page: currentPage),
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        backgroundColor: Colors.orange,
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => CreateCalibrationProfileScreen(me: widget.me),
-            ),
-          );
-        },
-        child: const Icon(Icons.add),
-      ),
-      body: isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : error != null
-          ? Center(
-        child: Text(
-          error!,
-          style: const TextStyle(color: Colors.red),
-          textAlign: TextAlign.center,
+      body: _body(),
+    );
+  }
+
+  Widget _body() {
+    if (isLoading && profiles.isEmpty) return const LoadingView();
+    if (error != null && profiles.isEmpty) {
+      return ErrorView(
+          error: error!, onRetry: () => loadProfiles(page: currentPage));
+    }
+    if (profiles.isEmpty) {
+      return const EmptyView(
+        icon: Icons.table_chart,
+        title: 'No lookup tables yet',
+        message: 'Lookup tables are created by TankSpeak in the web portal.',
+      );
+    }
+
+    return Column(
+      children: [
+        PaginationBar(
+          currentPage: currentPage,
+          total: total,
+          pageSize: pageSize,
+          onPrev: () => loadProfiles(page: currentPage - 1),
+          onNext: () => loadProfiles(page: currentPage + 1),
         ),
-      )
-          : Column(
-        children: [
-          // ================= PAGINATION BAR =================
-          PaginationBar(
-            currentPage: currentPage,
-            total: total,
-            pageSize: pageSize,
-            onPrev: () {
-              if (currentPage > 1) {
-                loadProfiles(page: currentPage - 1);
-              }
-            },
-            onNext: () {
-              final maxPage = (total / pageSize).ceil();
-              if (currentPage < maxPage) {
-                loadProfiles(page: currentPage + 1);
-              }
-            },
-          ),
-
-          // ================= LIST =================
-          Expanded(
-            child: RefreshIndicator(
-              onRefresh: () async {
-                await loadProfiles(page: currentPage);
-              },
-              child: profiles.isEmpty
-                  ? const Center(
-                child: Text(
-                  "No calibration profiles found",
-                  style: TextStyle(color: Colors.white70),
-                ),
-              )
-                  : ListView.builder(
-                padding: const EdgeInsets.all(12),
-                itemCount: profiles.length,
-                itemBuilder: (context, index) {
-                  final item = profiles[index];
-
-                  return GestureDetector(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                CalibrationLookupTableScreen(
-                                  profileId: item.id,
-                                ),
-                          ),
-                        );
-                      },
-
-                      child: Container(
-                    margin: const EdgeInsets.only(bottom: 12),
-                    padding: const EdgeInsets.all(14),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.06),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.08),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: () => loadProfiles(page: currentPage),
+            child: ListView.builder(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              itemCount: profiles.length,
+              itemBuilder: (context, index) {
+                final item = profiles[index];
+                return AppCard(
+                  padding: const EdgeInsets.all(14),
+                  margin: const EdgeInsets.only(bottom: 10),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            CalibrationLookupTableScreen(profileId: item.id),
                       ),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(
-                          Icons.science,
-                          color: Colors.orange,
-                        ),
-                        const SizedBox(width: 12),
-
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment:
-                            CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                item.name,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                "ID: ${item.id}",
-                                style: TextStyle(
-                                  color: Colors.white
-                                      .withOpacity(0.6),
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const Icon(
-                          Icons.chevron_right,
-                          color: Colors.white54,
-                        ),
-                      ],
-                    ),
-                  )
-                  );
-                },
-              ),
+                    );
+                  },
+                  child: Row(
+                    children: [
+                      const IconTile(Icons.table_chart_outlined),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(item.name, style: context.text.titleSmall),
+                      ),
+                      Icon(Icons.chevron_right,
+                          color: context.colors.onSurfaceVariant),
+                    ],
+                  ),
+                );
+              },
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

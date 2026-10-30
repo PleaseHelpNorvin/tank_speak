@@ -1,0 +1,43 @@
+{
+ "status": 200,
+ "body": {
+  "page": 1,
+  "size": 3,
+  "total": 5,
+  "sent_invitations": [
+   {
+    "gas_station": 13,
+    "user_inviter": 3,
+    "user_receiver": 28,
+    "message": "Invitation from Regular User For member at Auksilyo Solutions station testt request id2te2",
+    "updated_at": "2026-10-23T10:30:49.685202",
+    "company_id": 8,
+    "id": 9,
+    "role": "member",
+    "created_at": "2026-10-23T10:30:49.685198"
+   },
+   {
+    "gas_station": 13,
+    "user_inviter": 3,
+    "user_receiver": 22,
+    "message": "Invitation from Regular User For manager at Auksilyo Solutions station testt request id",
+    "updated_at": "2026-10-08T06:24:59.002613",
+    "company_id": 8,
+    "id": 4,
+    "role": "manager",
+    "created_at": "2026-10-08T06:24:59.002610"
+   },
+   {
+    "gas_station": 13,
+    "user_inviter": 3,
+    "user_receiver": 21,
+    "message": "Invitation from Regular User For manager at Auksilyo Solutions station testt request id",
+    "updated_at": "2026-10-08T05:51:53.481481",
+    "company_id": 8,
+    "id": 3,
+    "role": "manager",
+    "created_at": "2026-10-08T05:51:53.481477"
+   }
+  ]
+ }
+}

@@ -1,0 +1,131 @@
+{
+ "status": 200,
+ "body": {
+  "company": {
+   "name": "Auksilyo Solutions",
+   "address": "Unit 1001C Kepwealth Center Cebu Samar Loop, Cebu Business Park Cebu City, Philippines 6000",
+   "business_hours": "8:30 AM - 9:00 PM",
+   "created_at": "2026-09-29T09:26:58.411929",
+   "deleted_at": null,
+   "id": 8,
+   "phone": "information@auksilyo.com",
+   "extended_business_hours": "9:00 PM- 11:00 PM",
+   "updated_at": "2026-09-29T09:26:58.411933"
+  },
+  "stations": [
+   {
+    "id": 13,
+    "address": "`testt request id22",
+    "business_hours": "123123",
+    "created_at": "2026-10-05T09:58:46.745247",
+    "phone": "testt request id22",
+    "name": "testt request id2te2",
+    "company_id": 8,
+    "extended_business_hours": null,
+    "updated_at": "2026-10-05T09:58:46.745251"
+   }
+  ],
+  "station_count": 1,
+  "contacts": [
+   {
+    "name": "adadada1",
+    "id": 10,
+    "phone": "dadada1",
+    "created_at": "2026-09-29T09:26:58.414379",
+    "position": "adadada1",
+    "company_id": 8,
+    "station_id": null,
+    "email": null,
+    "updated_at": "2026-09-29T09:26:58.414383"
+   },
+   {
+    "name": "adadadad23",
+    "id": 18,
+    "phone": "dadadadadadad23",
+    "created_at": "2026-09-30T06:56:19.920774",
+    "position": "dadaadadadad23",
+    "company_id": 8,
+    "station_id": null,
+    "email": "adada@adad.cc",
+    "updated_at": "2026-09-30T06:56:19.920778"
+   },
+   {
+    "name": "dada",
+    "id": 20,
+    "phone": "adad",
+    "created_at": "2026-09-30T06:59:37.759426",
+    "position": "adad",
+    "company_id": 8,
+    "station_id": null,
+    "email": "adad@adad.jjh",
+    "updated_at": "2026-09-30T06:59:37.759430"
+   },
+   {
+    "name": "asda",
+    "id": 24,
+    "phone": "adada",
+    "created_at": "2026-09-30T07:44:45.963347",
+    "position": "adad",
+    "company_id": 8,
+    "station_id": null,
+    "email": "dadada@adad.yut",
+    "updated_at": "2026-09-30T07:44:45.963352"
+   },
+   {
+    "name": "dasdasd1",
+    "id": 26,
+    "phone": "asdasda1",
+    "created_at": "2026-10-09T05:48:21.845533",
+    "position": "asdasd1",
+    "company_id": 8,
+    "station_id": null,
+    "email": "sdasda@asdasd.gg1",
+    "updated_at": "2026-10-09T05:48:21.845537"
+   },
+   {
+    "name": "asdasd",
+    "id": 28,
+    "phone": "asdasd",
+    "created_at": "2026-10-09T05:57:55.084063",
+    "position": "aasdasd",
+    "company_id": 8,
+    "station_id": null,
+    "email": "asdad@asdasd.gg",
+    "updated_at": "2026-10-09T05:57:55.084067"
+   },
+   {
+    "name": "test1",
+    "id": 29,
+    "phone": "test1",
+    "created_at": "2026-10-09T06:29:33.805907",
+    "position": "test1",
+    "company_id": 8,
+    "station_id": 13,
+    "email": "test@asdasd.yhh1",
+    "updated_at": "2026-10-09T06:29:33.805912"
+   },
+   {
+    "name": "fafafa",
+    "id": 30,
+    "phone": "fafafaf",
+    "created_at": "2026-10-09T09:08:23.448541",
+    "position": "fafafa",
+    "company_id": 8,
+    "station_id": 13,
+    "email": "afafafa@adad.ff",
+    "updated_at": "2026-10-09T09:08:23.448546"
+   },
+   {
+    "name": "test",
+    "id": 31,
+    "phone": "test",
+    "created_at": "2026-10-09T09:53:59.597699",
+    "position": "test",
+    "company_id": 8,
+    "station_id": null,
+    "email": "test@asda.gg",
+    "updated_at": "2026-10-09T09:53:59.597703"
+   }
+  ]
+ }
+}

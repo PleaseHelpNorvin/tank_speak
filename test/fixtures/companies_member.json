@@ -1,0 +1,25 @@
+{
+ "status": 200,
+ "body": {
+  "companies": [
+   {
+    "name": "Auksilyo Solutions",
+    "address": "Unit 1001C Kepwealth Center Cebu Samar Loop, Cebu Business Park Cebu City, Philippines 6000",
+    "business_hours": "8:30 AM - 9:00 PM",
+    "created_at": "2026-09-29T09:26:58.411929",
+    "deleted_at": null,
+    "id": 8,
+    "phone": "information@auksilyo.com",
+    "extended_business_hours": "9:00 PM- 11:00 PM",
+    "updated_at": "2026-09-29T09:26:58.411933"
+   }
+  ],
+  "search": "",
+  "pagination": {
+   "page": 1,
+   "size": 10,
+   "total": 1,
+   "total_pages": 1
+  }
+ }
+}

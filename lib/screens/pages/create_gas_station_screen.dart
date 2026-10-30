@@ -1,68 +1,80 @@
 import 'package:flutter/material.dart';
-import 'package:tank_speak/models/me_response.dart';
-import 'package:tank_speak/screens/pages/splash_screen.dart';
-import '../../models/company.dart';
-import '../pages/profile_screen.dart';
-import '../pages/home_screen.dart';
-import '../../services/api_service.dart';
+import 'package:flutter/services.dart';
 
+import '../../models/me_response.dart';
+import '../../services/station_service.dart';
+import '../../widgets/app_theme.dart';
+import '../../widgets/state_views.dart';
+
+/// `POST /api/station/c/{company}/station-create` (company owners only).
+///
+/// The backend requires `subscription_plan_id` but exposes no API to list
+/// plans, so the plan number has to be entered (it is shown on the
+/// TankSpeak web portal / provided by TankSpeak). See the integration report.
 class CreateGasStationScreen extends StatefulWidget {
   final MeResponse me;
   final int companyId;
-  const CreateGasStationScreen({super.key, required this.me, required this.companyId});
+  final String? companyName;
+
+  const CreateGasStationScreen({
+    super.key,
+    required this.me,
+    required this.companyId,
+    this.companyName,
+  });
 
   @override
-  State<CreateGasStationScreen> createState() =>
-      _CreateGasStationScreenState();
+  State<CreateGasStationScreen> createState() => _CreateGasStationScreenState();
 }
 
 class _CreateGasStationScreenState extends State<CreateGasStationScreen> {
   final _formKey = GlobalKey<FormState>();
-  final ApiService api = ApiService();
+  final StationService _stations = StationService();
 
   final name = TextEditingController();
   final address = TextEditingController();
   final businessHours = TextEditingController();
   final exBusinessHours = TextEditingController();
   final phone = TextEditingController();
+  final planId = TextEditingController();
 
   bool isLoading = false;
 
-  void submit() async {
+  @override
+  void dispose() {
+    name.dispose();
+    address.dispose();
+    businessHours.dispose();
+    exBusinessHours.dispose();
+    phone.dispose();
+    planId.dispose();
+    super.dispose();
+  }
+
+  Future<void> submit() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() => isLoading = true);
 
     try {
-      final data = {
-        "name": name.text,
-        "address": address.text,
-        "business_hours": businessHours.text,
-        "ex_business_hour": exBusinessHours.text,
-        "phone": phone.text,
-      };
-
-      await api.createGasStation(widget.companyId,data);
-
-      setState(() => isLoading = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Gas Station Created!")),
+      final result = await _stations.createStation(
+        companyId: widget.companyId,
+        name: name.text,
+        address: address.text,
+        phone: phone.text,
+        businessHours: businessHours.text,
+        extendedBusinessHours: exBusinessHours.text,
+        subscriptionPlanId: int.parse(planId.text.trim()),
       );
 
       if (!mounted) return;
-
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (_) => const SplashScreen()),
-            (route) => false,
-      );
+      showSuccess(context, result.message);
+      Navigator.pop(context, true);
     } catch (e) {
-      setState(() => isLoading = false);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(e.toString())),
-      );
+      if (!mounted) return;
+      showError(context, e);
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
   }
 
@@ -70,26 +82,29 @@ class _CreateGasStationScreenState extends State<CreateGasStationScreen> {
     required String label,
     required TextEditingController controller,
     IconData? icon,
+    bool required = true,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    String? helperText,
+    String? Function(String?)? validator,
   }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.only(bottom: 14),
       child: TextFormField(
         controller: controller,
-        style: const TextStyle(color: Colors.white),
-        validator: (value) =>
-        value == null || value.isEmpty ? "Required" : null,
+        keyboardType: keyboardType,
+        inputFormatters: inputFormatters,
+        textInputAction: TextInputAction.next,
+        validator: validator ??
+            ((String? value) =>
+                required && (value == null || value.trim().isEmpty)
+                    ? "Required"
+                    : null),
         decoration: InputDecoration(
-          prefixIcon: icon != null
-              ? Icon(icon, color: Colors.white70)
-              : null,
-          labelText: label,
-          labelStyle: const TextStyle(color: Colors.white70),
-          filled: true,
-          fillColor: Colors.white.withOpacity(0.06),
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: BorderSide.none,
-          ),
+          prefixIcon: icon != null ? Icon(icon) : null,
+          labelText: required ? label : '$label (optional)',
+          helperText: helperText,
+          helperMaxLines: 3,
         ),
       ),
     );
@@ -97,135 +112,94 @@ class _CreateGasStationScreenState extends State<CreateGasStationScreen> {
 
   Widget sectionTitle(String title) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 8, top: 10),
-      child: Text(
-        title,
-        style: const TextStyle(
-          color: Colors.orange,
-          fontSize: 14,
-          fontWeight: FontWeight.bold,
-        ),
-      ),
+      padding: const EdgeInsets.only(bottom: 12, top: 8),
+      child: Text(title, style: context.text.titleMedium),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF0F2027),
-
-      appBar: AppBar(
-        title: Text("Create Gas Station ${widget.companyId}"),
-        backgroundColor: const Color(0xFF0F2027),
-        foregroundColor: Colors.white,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) =>  ProfileScreen(me: widget.me)),
-              );
-            },
-          ),
-        ],
-      ),
-
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              /// HEADER
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: Colors.white12),
-                ),
-                child: const Row(
-                  children: [
-                    Icon(Icons.local_gas_station,
-                        color: Colors.orange, size: 30),
-                    SizedBox(width: 10),
-                    Expanded(
-                      child: Text(
-                        "Create a new gas station",
-                        style: TextStyle(
-                          color: Colors.white70,
-                          fontSize: 12,
-                        ),
+      appBar: AppBar(title: const Text("New station")),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
+          child: Form(
+            key: _formKey,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                if (widget.companyName != null) ...[
+                  Row(
+                    children: [
+                      const IconTile(Icons.apartment_outlined),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(widget.companyName!,
+                            style: context.text.titleMedium),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  const SizedBox(height: 20),
+                ],
+                sectionTitle("Station details"),
+                buildInput(
+                  label: "Station name",
+                  controller: name,
+                  icon: Icons.local_gas_station_outlined,
                 ),
-              ),
-
-              const SizedBox(height: 20),
-
-              /// STATION DETAILS
-              sectionTitle("STATION DETAILS"),
-
-              buildInput(
-                label: "Station Name",
-                controller: name,
-                icon: Icons.store,
-              ),
-
-              buildInput(
-                label: "Address",
-                controller: address,
-                icon: Icons.location_on,
-              ),
-
-              buildInput(
-                label: "Phone",
-                controller: phone,
-                icon: Icons.phone,
-              ),
-
-              buildInput(
-                label: "Business Hours",
-                controller: businessHours,
-                icon: Icons.access_time,
-              ),
-
-              buildInput(
-                label: "Extra Business Hours",
-                controller: exBusinessHours,
-                icon: Icons.access_time_filled,
-              ),
-
-              const SizedBox(height: 25),
-
-              /// SUBMIT BUTTON
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
+                buildInput(
+                  label: "Address",
+                  controller: address,
+                  icon: Icons.location_on_outlined,
+                ),
+                buildInput(
+                  label: "Phone",
+                  controller: phone,
+                  icon: Icons.phone_outlined,
+                  keyboardType: TextInputType.phone,
+                ),
+                buildInput(
+                  label: "Business hours",
+                  controller: businessHours,
+                  icon: Icons.schedule_outlined,
+                ),
+                buildInput(
+                  label: "Extended business hours",
+                  controller: exBusinessHours,
+                  icon: Icons.more_time,
+                  required: false,
+                ),
+                const SizedBox(height: 8),
+                sectionTitle("Subscription"),
+                buildInput(
+                  label: "Subscription plan number",
+                  controller: planId,
+                  icon: Icons.card_membership_outlined,
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                  helperText: "Required by the server. Use the plan number "
+                      "provided by TankSpeak. The subscription starts when "
+                      "the station is created.",
+                  validator: (value) {
+                    final id = int.tryParse(value?.trim() ?? '');
+                    if (id == null || id <= 0) return "Enter a plan number";
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
                   onPressed: isLoading ? null : submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(14),
-                    ),
-                  ),
                   child: isLoading
-                      ? const CircularProgressIndicator(color: Colors.black)
-                      : const Text(
-                    "Create Gas Station",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
+                      ? const SizedBox(
+                          width: 22,
+                          height: 22,
+                          child: CircularProgressIndicator(strokeWidth: 2.5),
+                        )
+                      : const Text("Create station"),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

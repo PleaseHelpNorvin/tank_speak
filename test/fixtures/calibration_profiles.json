@@ -1,0 +1,14 @@
+{
+ "status": 200,
+ "body": {
+  "page": 1,
+  "size": 10,
+  "total": 1,
+  "profiles": [
+   {
+    "id": 1,
+    "name": "Default Calibration"
+   }
+  ]
+ }
+}

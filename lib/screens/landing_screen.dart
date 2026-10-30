@@ -8,7 +8,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:tank_speak/services/web_bluetooth_service.dart';
 
 import 'auth/login_screen.dart';
-import 'pages/ble_provision_screen.dart';
+import '../widgets/app_theme.dart';
 
 class LandingScreen extends StatefulWidget {
   const LandingScreen({super.key});
@@ -109,170 +109,106 @@ class _LandingScreenState extends State<LandingScreen> {
     }
   }
 
+  Future<void> _testWebBle() async {
+    if (!kIsWeb) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Run this on Chrome")),
+      );
+      return;
+    }
+
+    try {
+      final deviceName = await WebBluetoothService.requestDevice();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Connected to $deviceName")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(e.toString())),
+      );
+    }
+  }
+
+  Widget _feature(IconData icon, String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 18),
+      child: Row(
+        children: [
+          IconTile(icon, size: 44),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: context.text.titleSmall),
+                const SizedBox(height: 2),
+                Text(subtitle,
+                    style: context.text.bodySmall
+                        ?.copyWith(color: context.colors.onSurfaceVariant)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        width: double.infinity,
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF0F2027),
-              Color(0xFF203A43),
-              Color(0xFF2C5364),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              children: [
-                const Spacer(),
-
-                /// 🔥 ICON
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    shape: BoxShape.circle,
+      body: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const Spacer(),
+                  const Align(
+                    alignment: Alignment.centerLeft,
+                    child: BrandMark(size: 72),
                   ),
-                  child: const Icon(
-                    Icons.local_gas_station,
-                    size: 60,
-                    color: Colors.white,
+                  const SizedBox(height: 28),
+                  Text("TankSpeak", style: context.text.headlineMedium),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Monitor your fuel tanks easily",
+                    style: context.text.titleMedium?.copyWith(
+                        color: context.colors.onSurfaceVariant,
+                        fontWeight: FontWeight.w400),
                   ),
-                ),
-
-                const SizedBox(height: 20),
-
-                /// 🔥 TITLE
-                const Text(
-                  "TankSpeak",
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                    letterSpacing: 1.5,
-                  ),
-                ),
-
-                const SizedBox(height: 10),
-
-                /// 🔥 SUBTITLE
-                const Text(
-                  "Monitor your fuel tanks easily",
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white70,
-                  ),
-                ),
-
-                const Spacer(),
-
-                /// 🔥 LOGIN BUTTON
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    child: const Text(
-                      "Login",
-                      style: TextStyle(fontSize: 16),
-                    ),
+                  const SizedBox(height: 36),
+                  _feature(Icons.propane_tank_outlined, "Live tank levels",
+                      "Calibrated volumes from every Norvi sensor."),
+                  _feature(Icons.warning_amber_rounded,
+                      "Low-level & refill alerts",
+                      "See at a glance which tanks need attention."),
+                  _feature(Icons.groups_outlined, "Your team",
+                      "Invite managers and members to your stations."),
+                  const Spacer(flex: 2),
+                  FilledButton(
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => LoginScreen(),
-                        ),
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
                       );
                     },
+                    child: const Text("Sign In"),
                   ),
-                ),
-
-                const SizedBox(height: 10),
-
-                SizedBox(
-                  width: double.infinity,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                  if (kIsWeb) ...[
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: _testWebBle,
+                      icon: const Icon(Icons.bluetooth),
+                      label: const Text("Test Web BLE"),
                     ),
-                    child: const Text(
-                      "Test Web BLE",
-                      style: TextStyle(fontSize: 16),
-                    ),
-                      onPressed: () async {
-                        if (!kIsWeb) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text("Run this on Chrome")),
-                          );
-                          return;
-                        }
-
-                        try {
-                          final deviceName = await WebBluetoothService.requestDevice();
-
-                          if (!mounted) return;
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text("Connected to $deviceName"),
-                            ),
-                          );
-                        } catch (e) {
-                          if (!mounted) return;
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(e.toString()),
-                            ),
-                          );
-                        }
-                      }
-                  ),
-                ),
-
-                /// 🔥 BLE BUTTON
-                // SizedBox(
-                //   width: double.infinity,
-                //   child: ElevatedButton(
-                //     style: ElevatedButton.styleFrom(
-                //       backgroundColor: Colors.blue,
-                //       padding: const EdgeInsets.symmetric(vertical: 16),
-                //       shape: RoundedRectangleBorder(
-                //         borderRadius: BorderRadius.circular(12),
-                //       ),
-                //     ),
-                //     child: const Text(
-                //       "BLE Provision",
-                //       style: TextStyle(fontSize: 16),
-                //     ),
-                //     onPressed: () {
-                //       Navigator.push(
-                //         context,
-                //         MaterialPageRoute(
-                //           builder: (_) => const BleProvisionScreen(),
-                //         ),
-                //       );
-                //     },
-                //   ),
-                // ),
-
-                const SizedBox(height: 30),
-              ],
+                  ],
+                ],
+              ),
             ),
           ),
         ),

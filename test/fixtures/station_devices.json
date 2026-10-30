@@ -1,0 +1,23 @@
+{
+ "status": 200,
+ "body": {
+  "page": 1,
+  "size": 10,
+  "total": 1,
+  "devices": [
+   {
+    "id": 4,
+    "firmware_id": 7,
+    "device_key": "90:70:69:82:0B:6C",
+    "is_active": true,
+    "created_at": "2026-10-12T07:43:35.236421",
+    "station_id": 13,
+    "register_user": 1,
+    "name": "Norvi ESP32 90:70:69:82:0B:6C",
+    "type": "Norvi ESP32",
+    "last_seen": "2026-10-26T11:29:49.082995",
+    "updated_at": "2026-10-12T07:43:35.236425"
+   }
+  ]
+ }
+}

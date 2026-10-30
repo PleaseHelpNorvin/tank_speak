@@ -1,0 +1,51 @@
+{
+ "status": 200,
+ "body": {
+  "device_id": "90:70:69:82:0B:6C",
+  "sensor_pin": "A0",
+  "active_calibration_profile": {
+   "name": "Default Calibration",
+   "id": 1,
+   "percentage": 30.0
+  },
+  "threshold": 1630.647,
+  "max_capacity": 5435.49,
+  "readings": [
+   {
+    "raw": 123.1,
+    "value": 3636.31,
+    "status": " normal",
+    "event": null,
+    "timestamp": "2026-10-23T10:48:03.586690"
+   },
+   {
+    "raw": 100.45,
+    "value": 2826.52,
+    "status": " normal",
+    "event": null,
+    "timestamp": "2026-10-26T11:04:49.687033"
+   },
+   {
+    "raw": 89.3,
+    "value": 2434.21,
+    "status": " normal",
+    "event": null,
+    "timestamp": "2026-10-26T11:05:22.859603"
+   },
+   {
+    "raw": 89.3,
+    "value": 2434.21,
+    "status": " normal",
+    "event": null,
+    "timestamp": "2026-10-26T11:07:23.529687"
+   },
+   {
+    "raw": 121.3,
+    "value": 3567.33,
+    "status": "refill_alert",
+    "event": "refill",
+    "timestamp": "2026-10-26T11:29:49.086116"
+   }
+  ]
+ }
+}

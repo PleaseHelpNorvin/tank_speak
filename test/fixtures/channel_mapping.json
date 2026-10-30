@@ -1,0 +1,37 @@
+{
+ "status": 200,
+ "body": {
+  "A0": {
+   "id": 2,
+   "label": "teeeest key",
+   "unit": "cm",
+   "calibration_profile_id": 1,
+   "channel_key": "A0",
+   "device_id": 4
+  },
+  "A1": {
+   "id": 3,
+   "label": "wewwww",
+   "unit": "cm",
+   "calibration_profile_id": 1,
+   "channel_key": "A1",
+   "device_id": 4
+  },
+  "A2": {
+   "id": 4,
+   "label": "dwdw",
+   "unit": null,
+   "calibration_profile_id": 1,
+   "channel_key": "A2",
+   "device_id": 4
+  },
+  "test": {
+   "id": 5,
+   "label": "test",
+   "unit": "test",
+   "calibration_profile_id": 1,
+   "channel_key": "test",
+   "device_id": 4
+  }
+ }
+}

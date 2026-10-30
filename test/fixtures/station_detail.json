@@ -1,0 +1,271 @@
+{
+ "status": 200,
+ "body": {
+  "station": {
+   "id": 13,
+   "address": "`testt request id22",
+   "business_hours": "123123",
+   "created_at": "2026-10-05T09:58:46.745247",
+   "phone": "testt request id22",
+   "name": "testt request id2te2",
+   "company_id": 8,
+   "extended_business_hours": null,
+   "updated_at": "2026-10-05T09:58:46.745251"
+  },
+  "manager": {
+   "id": 22,
+   "name": "manager3",
+   "phone": null,
+   "is_super_admin": false,
+   "created_at": "2026-10-08T06:22:52",
+   "deleted_at": null,
+   "email": "manager3",
+   "username": "manager3",
+   "password": "<redacted>",
+   "invite_code": "9560105675",
+   "is_admin": false,
+   "updated_at": "2026-10-08T06:22:52"
+  },
+  "owner": {
+   "id": 3,
+   "name": "Regular User",
+   "phone": null,
+   "is_super_admin": false,
+   "created_at": "2026-08-12T09:25:39",
+   "deleted_at": null,
+   "email": "user@example.com",
+   "username": "user",
+   "password": "<redacted>",
+   "invite_code": "1000000003",
+   "is_admin": false,
+   "updated_at": "2026-08-12T09:25:39"
+  },
+  "members": [
+   {
+    "user": {
+     "id": 20,
+     "name": "user2",
+     "phone": null,
+     "is_super_admin": false,
+     "created_at": "2026-10-07T08:34:21",
+     "deleted_at": null,
+     "email": "user2",
+     "username": "user2",
+     "password": "<redacted>",
+     "invite_code": "8663614044",
+     "is_admin": false,
+     "updated_at": "2026-10-07T08:34:21"
+    },
+    "member": {
+     "company_id": 8,
+     "user_id": 20,
+     "station_id": 13,
+     "created_at": "2026-10-08T04:56:39.839243",
+     "role": "member",
+     "id": 39,
+     "updated_at": "2026-10-08T04:56:39.839247"
+    }
+   },
+   {
+    "user": {
+     "id": 22,
+     "name": "manager3",
+     "phone": null,
+     "is_super_admin": false,
+     "created_at": "2026-10-08T06:22:52",
+     "deleted_at": null,
+     "email": "manager3",
+     "username": "manager3",
+     "password": "<redacted>",
+     "invite_code": "9560105675",
+     "is_admin": false,
+     "updated_at": "2026-10-08T06:22:52"
+    },
+    "member": {
+     "company_id": 8,
+     "user_id": 22,
+     "station_id": 13,
+     "created_at": "2026-10-08T06:25:39.905212",
+     "role": "manager",
+     "id": 40,
+     "updated_at": "2026-10-08T06:25:39.905216"
+    }
+   },
+   {
+    "user": {
+     "id": 24,
+     "name": "user3",
+     "phone": null,
+     "is_super_admin": false,
+     "created_at": "2026-10-08T06:39:37",
+     "deleted_at": null,
+     "email": "user3",
+     "username": "user3",
+     "password": "<redacted>",
+     "invite_code": "2594298900",
+     "is_admin": false,
+     "updated_at": "2026-10-08T06:39:37"
+    },
+    "member": {
+     "company_id": 8,
+     "user_id": 24,
+     "station_id": 13,
+     "created_at": "2026-10-08T07:45:37.012344",
+     "role": "member",
+     "id": 41,
+     "updated_at": "2026-10-08T07:45:37.012349"
+    }
+   },
+   {
+    "user": {
+     "id": 25,
+     "name": "user4",
+     "phone": null,
+     "is_super_admin": false,
+     "created_at": "2026-10-08T07:48:54",
+     "deleted_at": null,
+     "email": "user4",
+     "username": "user4",
+     "password": "<redacted>",
+     "invite_code": "5778506903",
+     "is_admin": false,
+     "updated_at": "2026-10-08T07:48:54"
+    },
+    "member": {
+     "company_id": 8,
+     "user_id": 25,
+     "station_id": 13,
+     "created_at": "2026-10-08T07:49:50.460283",
+     "role": "member",
+     "id": 42,
+     "updated_at": "2026-10-08T07:49:50.460286"
+    }
+   },
+   {
+    "user": {
+     "id": 26,
+     "name": "user5",
+     "phone": null,
+     "is_super_admin": false,
+     "created_at": "2026-10-08T07:50:19",
+     "deleted_at": null,
+     "email": "user5",
+     "username": "user5",
+     "password": "<redacted>",
+     "invite_code": "1140715349",
+     "is_admin": false,
+     "updated_at": "2026-10-08T07:50:19"
+    },
+    "member": {
+     "company_id": 8,
+     "user_id": 26,
+     "station_id": 13,
+     "created_at": "2026-10-08T07:51:14.497176",
+     "role": "member",
+     "id": 43,
+     "updated_at": "2026-10-08T07:51:14.497180"
+    }
+   },
+   {
+    "user": {
+     "id": 27,
+     "name": "user6",
+     "phone": null,
+     "is_super_admin": false,
+     "created_at": "2026-10-08T07:51:38",
+     "deleted_at": null,
+     "email": "user6",
+     "username": "user6",
+     "password": "<redacted>",
+     "invite_code": "8055168479",
+     "is_admin": false,
+     "updated_at": "2026-10-08T07:51:38"
+    },
+    "member": {
+     "company_id": 8,
+     "user_id": 27,
+     "station_id": 13,
+     "created_at": "2026-10-08T07:52:24.955233",
+     "role": "member",
+     "id": 44,
+     "updated_at": "2026-10-08T07:52:24.955236"
+    }
+   },
+   {
+    "user": {
+     "id": 28,
+     "name": "user10",
+     "phone": null,
+     "is_super_admin": false,
+     "created_at": "2026-10-23T10:28:38",
+     "deleted_at": null,
+     "email": "user10@user10.cc",
+     "username": "user10",
+     "password": "<redacted>",
+     "invite_code": "7276949093",
+     "is_admin": false,
+     "updated_at": "2026-10-23T10:28:38"
+    },
+    "member": {
+     "company_id": 8,
+     "user_id": 28,
+     "station_id": 13,
+     "created_at": "2026-10-23T10:31:01.148924",
+     "role": "member",
+     "id": 45,
+     "updated_at": "2026-10-23T10:31:01.148928"
+    }
+   }
+  ],
+  "devices": [
+   {
+    "device": {
+     "id": 4,
+     "name": "Norvi ESP32 90:70:69:82:0B:6C",
+     "device_key": "90:70:69:82:0B:6C",
+     "type": "Norvi ESP32"
+    },
+    "latest_payload": {
+     "A0": {
+      "value": 3567.33,
+      "raw": 121.3,
+      "label": "teeeest key",
+      "unit": "cm",
+      "active_calibration_profile_id": 1,
+      "status": "refill_alert",
+      "refill_alert": true
+     },
+     "A1": {
+      "value": 3601.87,
+      "raw": 122.3,
+      "label": "wewwww",
+      "unit": "cm",
+      "active_calibration_profile_id": 1,
+      "status": "refill_alert",
+      "refill_alert": true
+     },
+     "A2": {
+      "value": 3636.31,
+      "raw": 123.3,
+      "label": "dwdw",
+      "unit": null,
+      "active_calibration_profile_id": 1,
+      "status": "normal",
+      "refill_alert": false
+     }
+    },
+    "payload_created_at": "2026-10-26T11:29:49.086116"
+   }
+  ],
+  "subscription": {
+   "started_at": "2026-10-05T09:58:46.746298",
+   "id": 10,
+   "is_active": true,
+   "updated_at": "2026-10-05T09:58:46.746962",
+   "station_id": 13,
+   "subscription_plan_id": 1,
+   "expires_at": "2026-11-05T09:58:46.746298",
+   "created_at": "2026-10-05T09:58:46.746959"
+  }
+ }
+}

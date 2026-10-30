@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import '../../services/api_service.dart';
+
 import '../../services/auth_service.dart';
+import '../../widgets/app_theme.dart';
+import '../../widgets/state_views.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -10,7 +12,7 @@ class RegisterScreen extends StatefulWidget {
 }
 
 class _RegisterScreenState extends State<RegisterScreen> {
-  final AuthService auth = AuthService(ApiService());
+  final AuthService auth = AuthService.instance;
 
   final TextEditingController username = TextEditingController();
   final TextEditingController name = TextEditingController();
@@ -21,260 +23,155 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool isLoading = false;
   bool obscurePassword = true;
   bool obscureConfirm = true;
+  String? errorText;
 
-  void handleRegister() async {
-    if (email.text.isEmpty ||
+  @override
+  void dispose() {
+    username.dispose();
+    name.dispose();
+    email.dispose();
+    password.dispose();
+    confirmPassword.dispose();
+    super.dispose();
+  }
+
+  Future<void> handleRegister() async {
+    if (email.text.trim().isEmpty ||
         password.text.isEmpty ||
         confirmPassword.text.isEmpty ||
-        username.text.isEmpty ||
-        name.text.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please fill all fields")),
-      );
+        username.text.trim().isEmpty ||
+        name.text.trim().isEmpty) {
+      setState(() => errorText = "Please fill in all fields.");
       return;
     }
 
     if (password.text != confirmPassword.text) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Passwords do not match")),
-      );
+      setState(() => errorText = "Passwords do not match.");
       return;
     }
 
-    setState(() => isLoading = true);
+    setState(() {
+      isLoading = true;
+      errorText = null;
+    });
 
-    bool success = await auth.register(username.text, name.text, email.text, password.text);
-    setState(() => isLoading = false);
-
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Registered successfully!")),
+    try {
+      await auth.register(
+        username: username.text,
+        name: name.text,
+        email: email.text,
+        password: password.text,
       );
-
+      if (!mounted) return;
+      showSuccess(context, "Account created. You can now sign in.");
       Navigator.pop(context);
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Registration failed")),
-      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => errorText = e.toString());
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
+  }
+
+  Widget _field(
+    TextEditingController controller,
+    String label,
+    IconData icon, {
+    TextInputType? keyboardType,
+    bool obscure = false,
+    VoidCallback? onToggle,
+    List<String>? autofill,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: controller,
+        keyboardType: keyboardType,
+        obscureText: obscure,
+        autocorrect: false,
+        autofillHints: autofill,
+        textInputAction: TextInputAction.next,
+        decoration: InputDecoration(
+          labelText: label,
+          prefixIcon: Icon(icon),
+          suffixIcon: onToggle == null
+              ? null
+              : IconButton(
+                  icon: Icon(obscure
+                      ? Icons.visibility_off_outlined
+                      : Icons.visibility_outlined),
+                  onPressed: onToggle,
+                ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            colors: [
-              Color(0xFF0F2027),
-              Color(0xFF203A43),
-              Color(0xFF2C5364),
-            ],
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-          ),
-        ),
+      appBar: AppBar(),
+      body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 24),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 30),
-
-                // HEADER
-                const Icon(
-                  Icons.person_add_alt_1,
-                  size: 45,
-                  color: Colors.white,
-                ),
-
-                const SizedBox(height: 15),
-
-                const Text(
-                  "Create Account",
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
+            padding: const EdgeInsets.fromLTRB(24, 0, 24, 32),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 440),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text("Create your account",
+                      style: context.text.headlineMedium),
+                  const SizedBox(height: 8),
+                  Text(
+                    "Join a station with an invitation, or create your own company.",
+                    style: context.text.bodyLarge
+                        ?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
-                ),
-
-                const SizedBox(height: 6),
-
-                const Text(
-                  "Register to start monitoring fuel tanks",
-                  style: TextStyle(
-                    color: Colors.white70,
-                    fontSize: 14,
-                  ),
-                ),
-
-                const SizedBox(height: 40),
-
-                const Text("Full Name", style: TextStyle(color: Colors.white70)),
-                const SizedBox(height: 8),
-
-                TextField(
-                  controller: name,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.08),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
+                  const SizedBox(height: 28),
+                  if (errorText != null) ...[
+                    InfoBanner(
+                      message: errorText!,
+                      icon: Icons.error_outline,
+                      color: context.status.danger,
                     ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-                // USERNAME
-                const Text("Username", style: TextStyle(color: Colors.white70)),
-                const SizedBox(height: 8),
-
-                TextField(
-                  controller: username,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.08),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // EMAIL
-                const Text("Email",
-                    style: TextStyle(color: Colors.white70)),
-                const SizedBox(height: 8),
-
-                TextField(
-                  controller: email,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.08),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 20),
-
-                // PASSWORD
-                const Text("Password",
-                    style: TextStyle(color: Colors.white70)),
-                const SizedBox(height: 8),
-
-                TextField(
-                  controller: password,
-                  obscureText: obscurePassword,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.08),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: Colors.white70,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          obscurePassword = !obscurePassword;
-                        });
-                      },
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // CONFIRM PASSWORD
-                const Text("Confirm Password",
-                    style: TextStyle(color: Colors.white70)),
-                const SizedBox(height: 8),
-
-                TextField(
-                  controller: confirmPassword,
-                  obscureText: obscureConfirm,
-                  style: const TextStyle(color: Colors.white),
-                  decoration: InputDecoration(
-                    filled: true,
-                    fillColor: Colors.white.withOpacity(0.08),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide.none,
-                    ),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        obscureConfirm
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: Colors.white70,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          obscureConfirm = !obscureConfirm;
-                        });
-                      },
-                    ),
-                  ),
-                ),
-
-                const SizedBox(height: 30),
-
-                // REGISTER BUTTON
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.orange,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  _field(name, "Full name", Icons.badge_outlined,
+                      autofill: const [AutofillHints.name]),
+                  _field(username, "Username", Icons.person_outline,
+                      autofill: const [AutofillHints.newUsername]),
+                  _field(email, "Email", Icons.alternate_email,
+                      keyboardType: TextInputType.emailAddress,
+                      autofill: const [AutofillHints.email]),
+                  _field(password, "Password", Icons.lock_outline,
+                      obscure: obscurePassword,
+                      autofill: const [AutofillHints.newPassword],
+                      onToggle: () =>
+                          setState(() => obscurePassword = !obscurePassword)),
+                  _field(confirmPassword, "Confirm password",
+                      Icons.lock_reset_outlined,
+                      obscure: obscureConfirm,
+                      onToggle: () =>
+                          setState(() => obscureConfirm = !obscureConfirm)),
+                  const SizedBox(height: 14),
+                  FilledButton(
                     onPressed: isLoading ? null : handleRegister,
                     child: isLoading
-                        ? const CircularProgressIndicator(
-                      color: Colors.white,
-                    )
-                        : const Text(
-                      "Create Account",
-                      style: TextStyle(fontSize: 16),
-                    ),
+                        ? const SizedBox(
+                            width: 22,
+                            height: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2.5),
+                          )
+                        : const Text("Create account"),
                   ),
-                ),
-
-                const SizedBox(height: 20),
-
-                // BACK TO LOGIN
-                Center(
-                  child: GestureDetector(
-                    onTap: () => Navigator.pop(context),
-                    child: const Text(
-                      "Already have an account? Login",
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 12,
-                        decoration: TextDecoration.underline,
-                      ),
-                    ),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text("I already have an account"),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

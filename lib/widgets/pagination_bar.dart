@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'app_theme.dart';
+
+/// Compact previous / next pager. Hidden when everything fits on one page.
 class PaginationBar extends StatelessWidget {
   final int currentPage;
   final int total;
@@ -18,114 +21,36 @@ class PaginationBar extends StatelessWidget {
 
   bool get hasNext => (currentPage * pageSize) < total;
   bool get hasPrev => currentPage > 1;
+  int get totalPages => total <= 0 ? 1 : ((total + pageSize - 1) ~/ pageSize);
 
   @override
   Widget build(BuildContext context) {
+    if (!hasNext && !hasPrev) return const SizedBox.shrink();
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.06),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _button(
-              icon: Icons.chevron_left,
-              enabled: hasPrev,
-              onTap: onPrev,
-            ),
-
-            Column(
-              children: [
-                Text(
-                  "Page $currentPage",
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-                Text(
-                  "Total: $total",
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 11,
-                  ),
-                ),
-              ],
-            ),
-
-            _button(
-              icon: Icons.chevron_right,
-              enabled: hasNext,
-              onTap: onNext,
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _button({
-    required IconData icon,
-    required bool enabled,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      onTap: enabled ? onTap : null,
-      borderRadius: BorderRadius.circular(12),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 200),
-        padding: const EdgeInsets.all(10),
-        decoration: BoxDecoration(
-          color: enabled
-              ? Colors.orange.withOpacity(0.15)
-              : Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Icon(
-          icon,
-          color: enabled ? Colors.orange : Colors.white24,
-          size: 22,
-        ),
-      ),
-    );
-  }
-}
-
-Widget _infoChip(String label, String value) {
-  return Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
         children: [
-          Text(
-            label,
-            style: TextStyle(
-              color: Colors.white.withOpacity(0.5),
-              fontSize: 10,
+          IconButton.filledTonal(
+            tooltip: 'Previous page',
+            onPressed: hasPrev ? onPrev : null,
+            icon: const Icon(Icons.chevron_left),
+          ),
+          Expanded(
+            child: Text(
+              'Page $currentPage of $totalPages  •  $total items',
+              textAlign: TextAlign.center,
+              style: context.text.bodySmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w600,
-              fontSize: 12,
-            ),
-            overflow: TextOverflow.ellipsis,
+          IconButton.filledTonal(
+            tooltip: 'Next page',
+            onPressed: hasNext ? onNext : null,
+            icon: const Icon(Icons.chevron_right),
           ),
         ],
       ),
-    ),
-  );
+    );
+  }
 }

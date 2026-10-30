@@ -5,7 +5,9 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:tank_speak/models/gas_station.dart';
 import '../../services/ble_provision_service.dart';
-import '../../services/api_service.dart';
+import '../../services/device_service.dart';
+import '../../widgets/app_theme.dart';
+import '../../widgets/state_views.dart';
 
 class BleProvisionScreen extends StatefulWidget {
   final GasStation station;
@@ -93,25 +95,30 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
 
   // ================= REGISTER DEVICE =================
   Future<void> registerDevice() async {
+    final mac = savedMac;
+    if (mac == null ||
+        mac.isEmpty ||
+        mac == "EMPTY_MAC" ||
+        mac == "READ_ERROR") {
+      setState(() => status = "No valid device ID. Provision the device again.");
+      return;
+    }
+
     try {
       setState(() => status = "Registering device...");
 
-      await ApiService().registerDevice(
-        deviceId: savedMac!,
+      final result = await DeviceService().registerDevice(
+        deviceKey: mac,
         stationId: widget.station.id,
       );
 
+      if (!mounted) return;
       setState(() => status = "Device Registered!");
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Device registered successfully")),
-      );
+      showSuccess(context, result.message);
     } catch (e) {
-      setState(() => status = "Error: $e");
-      print(e);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed: $e")),
-      );
+      if (!mounted) return;
+      setState(() => status = "Registration failed: $e");
+      showError(context, e);
     }
   }
 
@@ -131,10 +138,6 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: const Color(0xFF0F2027),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
       builder: (context) {
         return StatefulBuilder(
           builder: (context, setModalState) {
@@ -147,33 +150,43 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
 
             return Padding(
               padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery.of(context).viewInsets.bottom + 20,
+                left: 20,
+                right: 20,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 24,
               ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     device.device.platformName.isEmpty
                         ? "Unknown Device"
                         : device.device.platformName,
-                    style: const TextStyle(color: Colors.white),
+                    style: context.text.titleLarge,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    "Send the station's Wi-Fi details to the device.",
+                    style: context.text.bodyMedium
+                        ?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
 
                   const SizedBox(height: 10),
 
                   Container(
-                    height: 120,
-                    padding: const EdgeInsets.all(8),
-                    color: Colors.black,
+                    height: 110,
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0B1220),
+                      borderRadius: BorderRadius.circular(Brand.radiusSmall),
+                    ),
                     child: SingleChildScrollView(
                       child: Text(
                         debugLog,
                         style: const TextStyle(
-                          color: Colors.greenAccent,
+                          color: Color(0xFF4ADE80),
                           fontSize: 12,
+                          fontFamily: 'monospace',
                         ),
                       ),
                     ),
@@ -183,26 +196,26 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
 
                   TextField(
                     controller: ssidController,
-                    style: const TextStyle(color: Colors.white),
                     decoration: const InputDecoration(
-                      labelText: "SSID",
-                      labelStyle: TextStyle(color: Colors.white70),
+                      labelText: "Wi-Fi name (SSID)",
+                      prefixIcon: Icon(Icons.wifi),
                     ),
                   ),
 
+                  const SizedBox(height: 12),
+
                   TextField(
                     controller: passController,
-                    style: const TextStyle(color: Colors.white),
                     obscureText: true,
                     decoration: const InputDecoration(
-                      labelText: "Password",
-                      labelStyle: TextStyle(color: Colors.white70),
+                      labelText: "Wi-Fi password",
+                      prefixIcon: Icon(Icons.lock_outline),
                     ),
                   ),
 
                   const SizedBox(height: 20),
 
-                  ElevatedButton(
+                  FilledButton(
                     onPressed: provisioning
                         ? null
                         : () async {
@@ -260,7 +273,8 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
 
                   Text(
                     sheetStatus,
-                    style: const TextStyle(color: Colors.white70),
+                    style: context.text.bodySmall
+                        ?.copyWith(color: context.colors.onSurfaceVariant),
                   ),
                 ],
               ),
@@ -290,81 +304,133 @@ class _BleProvisionScreenState extends State<BleProvisionScreen> {
   // ================= UI =================
   @override
   Widget build(BuildContext context) {
+    final mac = savedMac;
     return Scaffold(
-      backgroundColor: const Color(0xFF0F2027),
-
-      appBar: AppBar(
-        title: const Text("BLE Provision"),
-        backgroundColor: const Color(0xFF0F2027),
-        foregroundColor: Colors.white,
-      ),
-
-      body: Column(
+      appBar: AppBar(title: const Text("Add device")),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
         children: [
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: Row(
+          _step(
+            1,
+            "Find the Norvi controller",
+            "Power the device on and keep the phone close to it.",
+          ),
+          _step(
+            2,
+            "Connect and send Wi-Fi",
+            "Tap the device below and enter the station's Wi-Fi details.",
+          ),
+          _step(
+            3,
+            "Register it to ${widget.station.name}",
+            "Once the device reports its ID, register it here.",
+          ),
+          const SizedBox(height: 8),
+          AppCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: Text(
-                    savedMac == null
-                        ? "Selected Device ID: None"
-                        : "Selected Device ID: $savedMac",
-                    style: const TextStyle(color: Colors.white70),
-                  ),
+                Row(
+                  children: [
+                    IconTile(Icons.fingerprint,
+                        color: mac == null
+                            ? context.status.neutral
+                            : context.status.success),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("Device ID",
+                              style: context.text.labelMedium?.copyWith(
+                                  color: context.colors.onSurfaceVariant)),
+                          Text(mac ?? "Not provisioned yet",
+                              style: context.text.titleSmall),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
-
-                ElevatedButton(
-                  onPressed: savedMac == null ? null : registerDevice,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange,
-                  ),
-                  child: const Text(
-                    "Register",
-                    style: TextStyle(color: Colors.black),
-                  ),
+                const SizedBox(height: 14),
+                FilledButton.icon(
+                  onPressed: mac == null ? null : registerDevice,
+                  icon: const Icon(Icons.app_registration),
+                  label: const Text("Register device"),
                 ),
               ],
             ),
           ),
-
-          Padding(
-            padding: const EdgeInsets.all(12),
-            child: ElevatedButton(
-              onPressed: isScanning ? null : scan,
-              child: Text(isScanning ? "Scanning..." : "Scan Devices"),
-            ),
+          Row(
+            children: [
+              Expanded(
+                child: Text("Nearby devices",
+                    style: context.text.titleMedium),
+              ),
+              FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 40)),
+                onPressed: isScanning ? null : scan,
+                icon: isScanning
+                    ? const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.bluetooth_searching),
+                label: Text(isScanning ? "Scanning…" : "Scan"),
+              ),
+            ],
           ),
-
-          Text(status, style: const TextStyle(color: Colors.white70)),
-
+          const SizedBox(height: 6),
+          Text(status,
+              style: context.text.bodySmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant)),
           const SizedBox(height: 10),
+          if (devices.isEmpty && !isScanning)
+            AppCard(
+              child: Text(
+                "No devices found yet. Tap Scan to search.",
+                style: context.text.bodyMedium
+                    ?.copyWith(color: context.colors.onSurfaceVariant),
+              ),
+            ),
+          ...devices.map((d) => AppCard(
+                padding: const EdgeInsets.symmetric(vertical: 2),
+                margin: const EdgeInsets.only(bottom: 8),
+                onTap: () => connectAndOpenSheet(d),
+                child: ListTile(
+                  leading: const Icon(Icons.bluetooth),
+                  title: Text(d.device.name.isEmpty ? "Unknown" : d.device.name),
+                  subtitle: Text(d.device.remoteId.str),
+                  trailing: const Icon(Icons.chevron_right),
+                ),
+              )),
+        ],
+      ),
+    );
+  }
 
+  Widget _step(int number, String title, String subtitle) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 14,
+            backgroundColor: context.colors.primaryContainer,
+            foregroundColor: context.colors.onPrimaryContainer,
+            child: Text('$number', style: context.text.labelMedium),
+          ),
+          const SizedBox(width: 12),
           Expanded(
-            child: ListView.builder(
-              itemCount: devices.length,
-              itemBuilder: (context, index) {
-                final d = devices[index];
-
-                return Card(
-                  color: const Color(0xFF1B2B34),
-                  margin: const EdgeInsets.symmetric(
-                      horizontal: 12, vertical: 6),
-                  child: ListTile(
-                    title: Text(
-                      d.device.name.isEmpty
-                          ? "Unknown"
-                          : d.device.name,
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    subtitle: Text(
-                      d.device.remoteId.str,
-                      style: const TextStyle(color: Colors.white54),
-                    ),
-                    onTap: () => connectAndOpenSheet(d),
-                  ),
-                );
-              },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: context.text.titleSmall),
+                Text(subtitle,
+                    style: context.text.bodySmall
+                        ?.copyWith(color: context.colors.onSurfaceVariant)),
+              ],
             ),
           ),
         ],

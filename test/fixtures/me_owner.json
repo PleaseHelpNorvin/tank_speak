@@ -1,0 +1,79 @@
+{
+ "status": 200,
+ "body": {
+  "id": 3,
+  "username": "user",
+  "name": "Regular User",
+  "email": "user@example.com",
+  "invite_code": "1000000003",
+  "owner": [
+   {
+    "id": 11,
+    "address": "22",
+    "business_hours": "22",
+    "created_at": "2026-10-05T08:55:10.723538",
+    "phone": "22",
+    "name": "22",
+    "company_id": 8,
+    "extended_business_hours": "22",
+    "updated_at": "2026-10-05T08:55:10.723542"
+   },
+   {
+    "id": 13,
+    "address": "`testt request id22",
+    "business_hours": "123123",
+    "created_at": "2026-10-05T09:58:46.745247",
+    "phone": "testt request id22",
+    "name": "testt request id2te2",
+    "company_id": 8,
+    "extended_business_hours": null,
+    "updated_at": "2026-10-05T09:58:46.745251"
+   },
+   {
+    "id": 15,
+    "address": "adadadadadad",
+    "business_hours": "adadadadadad",
+    "created_at": "2026-10-05T10:12:53.540151",
+    "phone": "adadadadadad",
+    "name": "adadadadadad",
+    "company_id": 8,
+    "extended_business_hours": "adadadadadad",
+    "updated_at": "2026-10-05T10:12:53.540156"
+   },
+   {
+    "id": 16,
+    "address": "ADADAD",
+    "business_hours": "DADADA",
+    "created_at": "2026-10-05T10:59:22.639850",
+    "phone": "ADADADA",
+    "name": "DADADA",
+    "company_id": 21,
+    "extended_business_hours": "DADADA",
+    "updated_at": "2026-10-05T10:59:22.639855"
+   },
+   {
+    "id": 17,
+    "address": "DADADA",
+    "business_hours": "DADAD",
+    "created_at": "2026-10-05T10:59:58.338456",
+    "phone": "DADADA",
+    "name": "DADADA",
+    "company_id": 21,
+    "extended_business_hours": "ADADADA",
+    "updated_at": "2026-10-05T10:59:58.338460"
+   },
+   {
+    "id": 18,
+    "address": "test",
+    "business_hours": "test",
+    "created_at": "2026-10-23T10:48:29.652288",
+    "phone": "test",
+    "name": "test",
+    "company_id": 17,
+    "extended_business_hours": "test",
+    "updated_at": "2026-10-23T10:48:29.652291"
+   }
+  ],
+  "manager": []
+ }
+}

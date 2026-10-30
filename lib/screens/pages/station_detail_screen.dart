@@ -1,922 +1,796 @@
 import 'package:flutter/material.dart';
-import 'package:tank_speak/screens/pages/add_device_screen.dart';
-import 'package:tank_speak/screens/pages/profile_screen.dart';
-import 'package:tank_speak/screens/pages/tank_detail_screen.dart';
-import '../../models/me_response.dart';
-import '../../models/tank.dart';
-import '../../services/api_service.dart';
-import '../../models/invitation.dart';
+
+import '../../core/formatters.dart';
+import '../../models/connectivity.dart';
 import '../../models/gas_station.dart';
+import '../../models/invitation.dart';
+import '../../models/me_response.dart';
+import '../../models/member.dart';
+import '../../models/tank.dart';
+import '../../services/access.dart';
+import '../../services/invitation_service.dart';
+import '../../services/station_service.dart';
+import '../../widgets/app_theme.dart';
+import '../../widgets/auto_refresh.dart';
+import '../../widgets/state_views.dart';
 import 'ble_provision_screen.dart';
 import 'calibration_list_screen.dart';
-import 'create_calibration_profile_screen.dart';
-import 'invitations_screen.dart';
+import 'device_detail_screen.dart';
+import 'tank_detail_screen.dart';
 
+/// Station overview: info, subscription, people, devices with connectivity
+/// and the latest calibrated tank readings. Refreshes automatically.
 class StationDetailScreen extends StatefulWidget {
   final GasStation station;
   final MeResponse me;
 
-  const StationDetailScreen({super.key, required this.station, required this.me});
+  /// Company owners manage every station of their company.
+  final bool isCompanyOwner;
+
+  const StationDetailScreen({
+    super.key,
+    required this.station,
+    required this.me,
+    this.isCompanyOwner = false,
+  });
 
   @override
   State<StationDetailScreen> createState() => _StationDetailScreenState();
 }
 
-class _StationDetailScreenState extends State<StationDetailScreen> {
-
-
-  final ApiService api = ApiService();
+class _StationDetailScreenState extends State<StationDetailScreen>
+    with AutoRefreshMixin<StationDetailScreen> {
+  final StationService _stations = StationService();
 
   StationDetailResponse? station;
   bool isLoading = true;
-  String? error;
-  final bool useMock = false;
-  bool showManager = false;
-  bool showOwner = false;
-  bool showStationInfo = true;
-  bool showRegisteredDevice = false;
-  Map<String, double> lastValues = {};
+  Object? error;
+  DateTime? lastUpdated;
+
 
   @override
   void initState() {
     super.initState();
     loadStation();
+    startAutoRefresh();
   }
 
-  Future<void> loadStation() async {
-    try {
-      final result = await api.getStationById(widget.station.id);
+  @override
+  Future<void> onAutoRefresh() => loadStation(silent: true);
 
+  bool _inFlight = false;
+
+  Future<void> loadStation({bool silent = false}) async {
+    if (_inFlight) return;
+    _inFlight = true;
+    if (!silent) {
       setState(() {
-        station = result;
-        isLoading = false;
+        isLoading = true;
         error = null;
       });
-    } catch (e) {
-      String message = "Something went wrong";
+    }
 
-      // 🔥 Try to extract backend message
-      if (e.toString().contains("Station not Found")) {
-        message = "You're not a member of this station";
-      } else if (e.toString().contains("404")) {
-        message = "Station not found";
-      }
-
+    try {
+      final result =
+          await _stations.getStationWithDeviceStatus(widget.station.id);
+      if (!mounted) return;
       setState(() {
-        error = message;
+        station = result;
+        error = null;
+        isLoading = false;
+        lastUpdated = DateTime.now().toUtc();
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        error = e;
         isLoading = false;
       });
+    } finally {
+      _inFlight = false;
     }
   }
 
-  // ================= UI HELPERS =================
+  StationRole get role => stationRoleFor(
+        widget.me,
+        widget.station.id,
+        detail: station,
+        isCompanyOwner: widget.isCompanyOwner,
+      );
 
-  Color getStatusColor(bool isActive) {
-    return isActive ? Colors.green : Colors.red;
-  }
-
-  IconData getDeviceIcon(String type) {
-    switch (type) {
-      case "dispenser":
-        return Icons.local_gas_station;
-      case "flow_sensor":
-        return Icons.sensors;
-      default:
-        return Icons.memory;
-    }
-  }
-
-  Map<String, dynamic> getFuelState(Map<String, dynamic> sensorData) {
-    final status = sensorData["status"] ?? "normal";
-
-    switch (status) {
-      case "dry_alert":
-        return {
-          "label": "DRY ALERT",
-          "color": Colors.red,
-        };
-
-      case "refill_alert":
-        return {
-          "label": "REFILL ALERT",
-          "color": Colors.blue,
-        };
-
-      case "no_profile":
-        return {
-          "label": "NO PROFILE",
-          "color": Colors.orange,
-        };
-
-      case "no_data":
-        return {
-          "label": "NO DATA",
-          "color": Colors.grey,
-        };
-
-      default:
-        return {
-          "label": "NORMAL",
-          "color": Colors.green,
-        };
-    }
-  }
-
-  @override
   @override
   Widget build(BuildContext context) {
-    if (isLoading) {
-      return const Scaffold(
-        backgroundColor: Color(0xFF0F2027),
-        body: Center(
-          child: CircularProgressIndicator(),
-        ),
-      );
-    }
-
-    if (error != null || station == null) {
-      return Scaffold(
-        backgroundColor: const Color(0xFF0F2027),
-        appBar: AppBar(
-          title: Text(widget.station.name),
-          backgroundColor: const Color(0xFF0F2027),
-          foregroundColor: Colors.white,
-        ),
-        floatingActionButton: FloatingActionButton(
-          backgroundColor: Colors.orange,
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => CreateCalibrationProfileScreen(me: widget.me),
-              ),
-            );
-          },
-          child: const Icon(Icons.add),
-        ),
-        body: Center(
-          child: Text(
-            error ?? "Station data not available",
-            style: const TextStyle(color: Colors.red),
-          ),
-        ),
-      );
-    }
-
-    final data = station!;
-
-    // 🔥 NEW DEVICES
-    final registeredDevices = data.devices;
-
-    // 🔥 FIRST DEVICE PAYLOAD
-    final firstDevice =
-    registeredDevices.isNotEmpty ? registeredDevices.first : null;
-
-    final payload = firstDevice?.latestPayload ?? {};
+    final data = station;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF0F2027),
-
       appBar: AppBar(
-        title: Text(data.station.name),
-        backgroundColor: const Color(0xFF0F2027),
-        foregroundColor: Colors.white,
+        title: Text(data?.station.name ?? widget.station.name),
         actions: [
           IconButton(
-            icon: const Icon(Icons.email),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => InvitationsScreen(me: widget.me),
-                ),
-              );
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ProfileScreen(me: widget.me),
-                ),
-              );
-            },
+            tooltip: 'Refresh',
+            icon: const Icon(Icons.refresh),
+            onPressed: isLoading ? null : () => loadStation(),
           ),
         ],
       ),
+      body: _buildBody(data),
+    );
+  }
 
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
+  Widget _buildBody(StationDetailResponse? data) {
+    if (data == null) {
+      if (error != null) {
+        return ErrorView(error: error!, onRetry: () => loadStation());
+      }
+      return const LoadingView();
+    }
 
-              // ================= BUTTONS =================
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                BleProvisionScreen(station: widget.station),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.precision_manufacturing),
-                      label: const Text("Register Norvi"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.black,
-                      ),
-                    ),
-                  ),
+    final canManage = role.canManageStation;
 
-                  const SizedBox(width: 15),
+    return RefreshIndicator(
+      onRefresh: () => loadStation(silent: true),
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 4, 20, 32),
+        children: [
+          if (error != null) ...[
+            InfoBanner(
+              icon: Icons.cloud_off_outlined,
+              color: context.status.warning,
+              message: 'Could not refresh: ${error.toString()}\n'
+                  'Showing data loaded ${Fmt.ago(lastUpdated)}.',
+            ),
+            const SizedBox(height: 12),
+          ],
+          _heroCard(data),
+          const SizedBox(height: 12),
+          _actions(data, canManage),
 
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        _openInviteManagerSheet(context, data.station);
-                      },
-                      icon: const Icon(Icons.person_add),
-                      label: const Text("Invite Manager"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.black,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 5),
-              Row(
-                children: [
-                  Expanded(
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                CalibrationListScreen(me : widget.me),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.precision_manufacturing),
-                      label: const Text("Manage Lookups"),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange,
-                        foregroundColor: Colors.black,
-                      ),
-                    ),
-                  ),
-
-                ]
-              ),
-              const SizedBox(height: 15),
-
-    // ================= INFO =================
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: _infoChip(data),
-              ),
-
-              const SizedBox(height: 20),
-
-              // ================= SENSOR DATA =================
-              if (payload.isNotEmpty) ...[
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text(
-                      "Sensor Data",
-                      style: TextStyle(
-                        color: Colors.orange,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-
-                    IconButton(
-                      icon: const Icon(Icons.refresh, color: Colors.orange),
-                      onPressed: () async {
-                        await loadStation();
-                      },
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: 10),
-
-                Column(
-                  children: payload.entries.map((e) {
-
-                    final sensorData =
-                    e.value as Map<String, dynamic>;
-
-                    final value = double.tryParse(
-                      sensorData["value"].toString(),
-                    ) ?? 0;
-
-                    final label =
-                        sensorData["label"] ?? e.key;
-                    final activeCalibProfile = sensorData["active_calibration_profile_id"];
-
-                    final int? activeCalibProfileId = activeCalibProfile is int
-                        ? activeCalibProfile
-                        : int.tryParse(activeCalibProfile.toString());
-                    debugPrint('activeCalibProfileId:  $activeCalibProfileId');
-                    final status = getFuelState(sensorData);
-                    debugPrint("label: $label");
-                    return InkWell(
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) =>
-                                TankDetailScreen(
-                                  me: widget.me,
-                                  deviceId: firstDevice!.device.id,
-                                  sensorPin: e.key,
-                                  productName: label,
-                                  deviceKey: firstDevice.device.deviceKey,
-                                  activeCalibProfileId: activeCalibProfileId,
-                                  stationId: widget.station.id,
-                                ),
-                          ),
-                        );
-                      },
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.06),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Row(
-                          children: [
-
-                            const Icon(
-                              Icons.sensors,
-                              color: Colors.orange,
-                            ),
-
-                            const SizedBox(width: 10),
-
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                                children: [
-
-                                  Text(
-                                    label,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-
-                                  Text(
-                                    "${e.key}: $value",
-                                    style: TextStyle(
-                                      color:
-                                      Colors.white.withOpacity(0.7),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 4,
-                              ),
-                              decoration: BoxDecoration(
-                                color: (status["color"] as Color)
-                                    .withOpacity(0.2),
-                                borderRadius:
-                                BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: status["color"],
-                                ),
-                              ),
-                              child: Text(
-                                status["label"],
-                                style: TextStyle(
-                                  color: status["color"],
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ],
-
-              const SizedBox(height: 20),
-
-              // ================= REGISTERED DEVICES =================
-              // const Text(
-              //   "Registered Devices",
-              //   style: TextStyle(
-              //     color: Colors.orange,
-              //     fontWeight: FontWeight.bold,
-              //     fontSize: 16,
-              //   ),
-              // ),
-              //
-              // const SizedBox(height: 10),
-              //
-              // ListView.builder(
-              //   itemCount: registeredDevices.length,
-              //   shrinkWrap: true,
-              //   physics: const NeverScrollableScrollPhysics(),
-              //   itemBuilder: (context, index) {
-              //     final item = registeredDevices[index];
-              //     final device = item.device;
-              //
-              //     return Container(
-              //       margin: const EdgeInsets.only(bottom: 14),
-              //       padding: const EdgeInsets.all(16),
-              //       decoration: BoxDecoration(
-              //         color: Colors.white.withOpacity(0.08),
-              //         borderRadius: BorderRadius.circular(16),
-              //       ),
-              //       child: Column(
-              //         crossAxisAlignment:
-              //         CrossAxisAlignment.start,
-              //         children: [
-              //
-              //           Row(
-              //             children: [
-              //
-              //               Icon(
-              //                 getDeviceIcon(device.type),
-              //                 color: Colors.white,
-              //               ),
-              //
-              //               const SizedBox(width: 12),
-              //
-              //               Expanded(
-              //                 child: Column(
-              //                   crossAxisAlignment:
-              //                   CrossAxisAlignment.start,
-              //                   children: [
-              //
-              //                     Text(
-              //                       device.name,
-              //                       style: const TextStyle(
-              //                         color: Colors.white,
-              //                         fontWeight: FontWeight.bold,
-              //                       ),
-              //                     ),
-              //
-              //                     Text(
-              //                       device.type,
-              //                       style: TextStyle(
-              //                         color: Colors.white
-              //                             .withOpacity(0.7),
-              //                       ),
-              //                     ),
-              //                   ],
-              //                 ),
-              //               ),
-              //
-              //               const Text(
-              //                 "ACTIVE",
-              //                 style: TextStyle(
-              //                   color: Colors.green,
-              //                 ),
-              //               ),
-              //             ],
-              //           ),
-              //
-              //           const SizedBox(height: 10),
-              //
-              //           Text(
-              //             "Device Key: ${device.deviceKey}",
-              //             style: TextStyle(
-              //               color:
-              //               Colors.white.withOpacity(0.7),
-              //             ),
-              //           ),
-              //
-              //           const SizedBox(height: 5),
-              //
-              //           Text(
-              //             "Payload Time: ${item.payloadCreatedAt ?? 'N/A'}",
-              //             style: TextStyle(
-              //               color:
-              //               Colors.white.withOpacity(0.7),
-              //               fontSize: 12,
-              //             ),
-              //           ),
-              //         ],
-              //       ),
-              //     );
-              //   },
-              // ),
-            ],
+          SectionTitle(
+            'Tanks',
+            trailing: Text(
+              lastUpdated == null ? '' : 'Updated ${Fmt.time(lastUpdated)}',
+              style: context.text.labelSmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
+            ),
           ),
-        ),
+          if (data.devices.isEmpty)
+            AppCard(
+              child: EmptyView(
+                icon: Icons.sensors_off_outlined,
+                title: 'No devices yet',
+                message: canManage
+                    ? 'Use "Add device" to provision a Norvi controller '
+                        'over Bluetooth and register it here.'
+                    : 'No devices are registered to this station yet.',
+              ),
+            ),
+          ...data.devices.map((d) => _deviceSection(data, d)),
+
+          const SectionTitle('Station details'),
+          AppCard(child: _infoSection(data)),
+
+          SectionTitle('People',
+              trailing: Text(
+                '${(data.owner == null ? 0 : 1) + data.members.length}',
+                style: context.text.labelLarge
+                    ?.copyWith(color: context.colors.onSurfaceVariant),
+              )),
+          AppCard(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            child: _peopleSection(data),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _infoChip(StationDetailResponse data) {
-    final station = data.station;
-    final manager = data.manager;
-    final owner = data.owner;
-    final devices = data.devices;
+  Widget _heroCard(StationDetailResponse data) {
+    final s = data.station;
+    final sub = data.subscription;
 
-    final StationDevice? firstDevice =
-    devices.isNotEmpty ? devices.first : null;
+    final Widget subscriptionPill;
+    if (sub == null) {
+      subscriptionPill = StatusPill(
+          label: 'No subscription',
+          color: context.status.neutral,
+          icon: Icons.card_membership_outlined);
+    } else if (sub.isExpired) {
+      subscriptionPill = StatusPill(
+          label: 'Expired ${Fmt.date(sub.expiresAt)}',
+          color: context.status.danger,
+          icon: Icons.card_membership_outlined);
+    } else {
+      subscriptionPill = StatusPill(
+          label: 'Active until ${Fmt.date(sub.expiresAt)}',
+          color: context.status.success,
+          icon: Icons.card_membership_outlined);
+    }
 
-    final device = firstDevice?.device;
+    final alerts = data.devices
+        .expand((d) => d.channels)
+        .where((c) =>
+            c.status == ChannelStatus.dryAlert ||
+            c.status == ChannelStatus.refillAlert)
+        .length;
 
-    Widget infoBox(String value, IconData icon) {
-      return Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-        decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.05),
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: Colors.white.withOpacity(0.08)),
-        ),
-        child: Row(
-          children: [
-            Icon(icon, color: Colors.orange, size: 16),
-            const SizedBox(width: 6),
-            Expanded(
-              child: Text(
-                value,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+    return AppCard(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const IconTile(Icons.local_gas_station_outlined, size: 52),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(s.name, style: context.text.titleLarge),
+                    if (s.address.isNotEmpty)
+                      Text(s.address,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.text.bodySmall?.copyWith(
+                              color: context.colors.onSurfaceVariant)),
+                  ],
                 ),
-                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              RolePill(role),
+              subscriptionPill,
+              StatusPill(
+                label: '${data.devices.length} '
+                    '${data.devices.length == 1 ? 'device' : 'devices'}',
+                color: context.colors.primary,
+                icon: Icons.memory,
+              ),
+              if (alerts > 0)
+                StatusPill(
+                  label: '$alerts ${alerts == 1 ? 'alert' : 'alerts'}',
+                  color: context.status.danger,
+                  icon: Icons.warning_amber_rounded,
+                ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _actions(StationDetailResponse data, bool canManage) {
+    final lookups = OutlinedButton.icon(
+      onPressed: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => CalibrationListScreen(me: widget.me),
+          ),
+        );
+      },
+      icon: const Icon(Icons.table_chart_outlined),
+      label: const Text("Lookup tables"),
+    );
+
+    if (!canManage) return lookups;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: FilledButton.icon(
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => BleProvisionScreen(station: data.station),
+                    ),
+                  );
+                  if (mounted) loadStation(silent: true);
+                },
+                icon: const Icon(Icons.bluetooth_searching),
+                label: const Text("Add device"),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: FilledButton.tonalIcon(
+                style: FilledButton.styleFrom(minimumSize: const Size(0, 52)),
+                onPressed: () => _openInviteSheet(context, data.station),
+                icon: const Icon(Icons.person_add_alt_1_outlined),
+                label: const Text("Invite"),
               ),
             ),
           ],
         ),
-      );
-    }
-
-    Widget section(List<Widget> children) {
-      return GridView.count(
-        crossAxisCount: 2,
-        crossAxisSpacing: 5,
-        mainAxisSpacing: 5,
-        childAspectRatio: 3.5,
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        padding: EdgeInsets.zero,
-        children: children,
-      );
-    }
-
-    Widget toggleHeader(String title,
-        bool value,
-        VoidCallback onTap,) {
-      return InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 4),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(
-                  color: Colors.orange,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 12,
-                  letterSpacing: 1,
-                ),
-              ),
-              Icon(
-                value ? Icons.expand_less : Icons.expand_more,
-                color: Colors.orange,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return StatefulBuilder(
-      builder: (context, setState) {
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // ================= STATION =================
-            toggleHeader("STATION INFO", showStationInfo, () {
-              setState(() => showStationInfo = !showStationInfo);
-            }),
-
-            const SizedBox(height: 5),
-
-            if (showStationInfo)
-              section([
-                infoBox(station.name, Icons.local_gas_station),
-                infoBox(station.phone, Icons.phone),
-                infoBox(station.address, Icons.location_on),
-                infoBox(station.businessHours, Icons.schedule),
-              ]),
-
-            // ================= MANAGER =================
-            toggleHeader("MANAGER", showManager, () {
-              setState(() => showManager = !showManager);
-            }),
-
-            const SizedBox(height: 5),
-
-            if (showManager)
-              section([
-                infoBox(manager?.name ?? "N/A", Icons.person),
-                infoBox(
-                    manager?.username ?? "N/A", Icons.supervised_user_circle),
-                infoBox(manager?.inviteCode ?? "N/A", Icons.code),
-                infoBox(manager?.email ?? "N/A", Icons.email),
-              ]),
-
-            // ================= OWNER =================
-            toggleHeader("OWNER", showOwner, () {
-              setState(() => showOwner = !showOwner);
-            }),
-
-            const SizedBox(height: 5),
-
-            if (showOwner)
-              section([
-                infoBox(owner?.name ?? "N/A", Icons.verified_user),
-                infoBox(owner?.inviteCode ?? "N/A", Icons.person_outline),
-                infoBox(owner?.email ?? "N/A", Icons.alternate_email),
-              ]),
-
-            // ================= DEVICE =================
-            toggleHeader("REGISTERED DEVICE", showRegisteredDevice, () {
-              setState(() => showRegisteredDevice = !showRegisteredDevice);
-            }),
-
-            const SizedBox(height: 5),
-
-            if (showRegisteredDevice)
-              section([
-                infoBox(device?.name ?? "N/A", Icons.memory),
-                infoBox(device?.deviceKey ?? "N/A", Icons.fingerprint),
-                infoBox(device?.type ?? "N/A", Icons.device_hub),
-                // infoBox(
-                //   firstDevice?.device.isActive == true ? "ACTIVE" : "OFFLINE",
-                //   Icons.power,
-                // ),
-              ]),
-          ],
-        );
-      },
+        const SizedBox(height: 10),
+        lookups,
+      ],
     );
   }
 
-  void _openInviteManagerSheet(BuildContext context, GasStation station) {
-    final controller = TextEditingController();
+  Widget _infoSection(StationDetailResponse data) {
+    final s = data.station;
+    return Column(
+      children: [
+        InfoRow(
+            icon: Icons.location_on_outlined,
+            label: 'Address',
+            value: s.address),
+        InfoRow(icon: Icons.phone_outlined, label: 'Phone', value: s.phone),
+        InfoRow(
+            icon: Icons.schedule_outlined,
+            label: 'Hours',
+            value: s.businessHours),
+        if (s.extendedBusinessHours != null)
+          InfoRow(
+              icon: Icons.more_time,
+              label: 'Extended',
+              value: s.extendedBusinessHours!),
+        InfoRow(
+            icon: Icons.manage_accounts_outlined,
+            label: 'Manager',
+            value: data.manager?.displayName ?? 'None'),
+      ],
+    );
+  }
 
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF0F2027),
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+  Widget _peopleSection(StationDetailResponse data) {
+    final rows = <Widget>[
+      if (data.owner != null)
+        _personTile(data.owner!.displayName, StationRole.owner,
+            isMe: data.owner!.id == widget.me.id),
+      ...data.members.map((m) => _personTile(
+            m.person.displayName,
+            m.role,
+            rawRole: m.rawRole,
+            isMe: m.person.id == widget.me.id,
+          )),
+    ];
+    if (rows.isEmpty) {
+      return const ListTile(title: Text('No people listed'));
+    }
+    return Column(children: rows);
+  }
+
+  Widget _personTile(String name, StationRole? role,
+      {String? rawRole, bool isMe = false}) {
+    final initial = name.isEmpty ? '?' : name[0].toUpperCase();
+    return ListTile(
+      leading: CircleAvatar(
+        backgroundColor: context.colors.primaryContainer,
+        foregroundColor: context.colors.onPrimaryContainer,
+        child: Text(initial),
       ),
-      builder: (context) {
-        Invitation? foundUser;
-        bool isSearching = false;
-        bool isInvited = false;
-        String selectedRole = "manager";
+      title: Text(isMe ? '$name (you)' : name),
+      trailing: role != null
+          ? RolePill(role)
+          : StatusPill(
+              label: rawRole ?? 'Unknown', color: context.status.neutral),
+    );
+  }
 
-        Future<void> searchUser(String value, StateSetter setState) async {
-          if (value.isEmpty) return;
+  Widget _deviceSection(StationDetailResponse data, StationDevice item) {
+    final device = item.device;
+    final connectivity = DeviceConnectivity.evaluate(
+      isActive: device.isActive,
+      lastSeen: device.lastSeen,
+      lastPayloadAt: item.payloadCreatedAt,
+    );
+    final live = connectivity.readingsAreLive;
 
-          setState(() => isSearching = true);
-
-          try {
-            final result = await ApiService().searchInvitation(value);
-
-            setState(() {
-              foundUser = result;
-              isInvited = false;
-            });
-
-            // 🔥 If already invited (backend flag)
-            if (result.invited) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text("User already invited"),
-                  backgroundColor: Colors.orange,
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          InkWell(
+            borderRadius: BorderRadius.circular(Brand.radiusSmall),
+            onTap: () => _openDevice(data, item),
+            child: Row(
+              children: [
+                IconTile(Icons.memory,
+                    color: connectivityColor(context, connectivity.state)),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(device.displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: context.text.titleSmall),
+                      Text(
+                        connectivity.lastContact == null
+                            ? device.deviceKey
+                            : 'Last contact ${Fmt.ago(connectivity.lastContact)}',
+                        style: context.text.bodySmall?.copyWith(
+                            color: context.colors.onSurfaceVariant),
+                      ),
+                    ],
+                  ),
                 ),
+                ConnectivityBadge(connectivity),
+                Icon(Icons.chevron_right,
+                    color: context.colors.onSurfaceVariant),
+              ],
+            ),
+          ),
+          if (!live) ...[
+            const SizedBox(height: 12),
+            InfoBanner(
+              message: connectivity.summary,
+              icon: Icons.info_outline,
+              color: connectivityColor(context, connectivity.state),
+            ),
+          ],
+          const SizedBox(height: 14),
+          if (item.channels.isEmpty)
+            Text('No sensor readings received yet.',
+                style: context.text.bodyMedium
+                    ?.copyWith(color: context.colors.onSurfaceVariant))
+          else
+            LayoutBuilder(builder: (context, constraints) {
+              const gap = 10.0;
+              final columns = constraints.maxWidth >= 520 ? 3 : 2;
+              final width =
+                  (constraints.maxWidth - gap * (columns - 1)) / columns;
+              return Wrap(
+                spacing: gap,
+                runSpacing: gap,
+                children: item.channels
+                    .map((c) => SizedBox(
+                          width: width,
+                          child: _tankTile(data, item, c, live),
+                        ))
+                    .toList(),
               );
-            }
-          } catch (e) {
-            setState(() {
-              foundUser = null;
-            });
+            }),
+          if (item.payloadCreatedAt != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              'Reading time ${Fmt.dateTime(item.payloadCreatedAt)}',
+              style: context.text.labelSmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
 
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text("Invite code not found"),
-                backgroundColor: Colors.red,
-              ),
-            );
-          } finally {
-            setState(() => isSearching = false);
-          }
-        }
+  Widget _tankTile(StationDetailResponse data, StationDevice item,
+      ChannelReading channel, bool live) {
+    final color = channelStatusColor(context, channel.status);
+    final valueText = channel.value != null
+        ? Fmt.number(channel.value)
+        : (channel.rawValue?.toString() ?? '—');
+    final unit = channel.value != null ? channel.displayUnit : null;
+    final faded = context.colors.onSurfaceVariant;
 
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Padding(
-              padding: EdgeInsets.only(
-                left: 16,
-                right: 16,
-                top: 16,
-                bottom: MediaQuery
-                    .of(context)
-                    .viewInsets
-                    .bottom + 20,
+    return Material(
+      color: context.colors.surfaceContainerHigh.withValues(alpha: 0.6),
+      borderRadius: BorderRadius.circular(16),
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () async {
+          await Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => TankDetailScreen(
+                me: widget.me,
+                device: item.device,
+                channelKey: channel.key,
+                channelLabel: channel.label,
+                channelUnit: channel.unit,
+                activeCalibProfileId: channel.calibrationProfileId,
+                stationId: data.station.id,
+                canManage: role.canManageStation,
+                lastPayloadAt: item.payloadCreatedAt,
               ),
-              child: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
+            ),
+          );
+          if (mounted) loadStation(silent: true);
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(14),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(Icons.propane_tank_outlined,
+                      size: 18, color: live ? context.colors.primary : faded),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(channel.label,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: context.text.labelLarge),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 10),
+              Text.rich(
+                TextSpan(
                   children: [
-                    const Text(
-                      "Invite Manager",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                    TextSpan(
+                      text: valueText,
+                      style: context.text.headlineSmall?.copyWith(
+                        color: live ? context.colors.onSurface : faded,
                       ),
                     ),
-
-                    const SizedBox(height: 12),
-
-                    // ================= INPUT =================
-                    TextField(
-                      controller: controller,
-                      style: const TextStyle(color: Colors.white),
-                      onChanged: (_) {
-                        setState(() {
-                          foundUser = null;
-                          isInvited = false;
-                        });
-                      },
-                      onSubmitted: (value) => searchUser(value, setState),
-                      decoration: InputDecoration(
-                        hintText: "Enter invite code",
-                        hintStyle: const TextStyle(color: Colors.white54),
-                        filled: true,
-                        fillColor: Colors.white.withOpacity(0.05),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        suffixIcon: IconButton(
-                          icon: const Icon(Icons.search, color: Colors.orange),
-                          onPressed: () =>
-                              searchUser(controller.text, setState),
-                        ),
+                    if (unit != null)
+                      TextSpan(
+                        text: ' $unit',
+                        style: context.text.bodyMedium?.copyWith(color: faded),
                       ),
-                    ),
-
-                    const SizedBox(height: 10),
-
-                    if (isSearching)
-                      const Padding(
-                        padding: EdgeInsets.all(10),
-                        child: CircularProgressIndicator(color: Colors.orange),
-                      ),
-
-                    const SizedBox(height: 10),
-
-                    // ================= ROLE =================
-                    DropdownButtonFormField<String>(
-                      value: selectedRole,
-                      dropdownColor: const Color(0xFF0F2027),
-                      style: const TextStyle(color: Colors.white),
-                      items: const [
-                        DropdownMenuItem(value: "owner", child: Text("Owner")),
-                        DropdownMenuItem(value: "manager", child: Text(
-                            "Manager")),
-                      ],
-                      onChanged: (value) {
-                        setState(() => selectedRole = value!);
-                      },
-                    ),
-
-                    const SizedBox(height: 16),
-
-                    // ================= RESULT =================
-                    if (foundUser != null)
-                      Container(
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.06),
-                          borderRadius: BorderRadius.circular(14),
-                        ),
-                        child: Row(
-                          children: [
-                            CircleAvatar(
-                              backgroundColor: Colors.orange.withOpacity(0.2),
-                              child: const Icon(
-                                  Icons.person, color: Colors.orange),
-                            ),
-
-                            const SizedBox(width: 12),
-
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    foundUser!.username,
-                                    style: const TextStyle(color: Colors.white),
-                                  ),
-                                  Text(
-                                    foundUser!.email,
-                                    style: const TextStyle(
-                                        color: Colors.white54),
-                                  ),
-                                ],
-                              ),
-                            ),
-
-                            IconButton(
-                              onPressed: (isInvited || foundUser!.invited)
-                                  ? null
-                                  : () async {
-                                try {
-                                  await ApiService().sendInvite(
-                                    code: foundUser!.inviteCode,
-                                    role: selectedRole,
-                                    stationId: station.id,
-                                    companyId: station.companyId,
-                                  );
-
-                                  setState(() => isInvited = true);
-
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(
-                                        "Invited ${foundUser!.username}",
-                                      ),
-                                      backgroundColor: Colors.green,
-                                    ),
-                                  );
-                                } catch (e) {
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text("Failed to send invite"),
-                                      backgroundColor: Colors.red,
-                                    ),
-                                  );
-                                }
-                              },
-                              icon: Icon(
-                                (isInvited || foundUser!.invited)
-                                    ? Icons.check
-                                    : Icons.person_add_alt_1,
-                                color: (isInvited || foundUser!.invited)
-                                    ? Colors.green
-                                    : Colors.orange,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                    const SizedBox(height: 20),
                   ],
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
-            );
-          },
-        );
-      },
+              const SizedBox(height: 8),
+              StatusPill(label: channel.status.label, color: color),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _openDevice(StationDetailResponse data, StationDevice item) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DeviceDetailScreen(
+          me: widget.me,
+          stationDevice: item,
+          stationId: data.station.id,
+          canManage: role.canManageStation,
+        ),
+      ),
+    );
+  }
+
+  void _openInviteSheet(BuildContext context, GasStation station) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (_) => _InviteSheet(station: station),
+    );
+  }
+}
+
+/// Look up a user by invite code and invite them as manager or member.
+class _InviteSheet extends StatefulWidget {
+  const _InviteSheet({required this.station});
+
+  final GasStation station;
+
+  @override
+  State<_InviteSheet> createState() => _InviteSheetState();
+}
+
+class _InviteSheetState extends State<_InviteSheet> {
+  final InvitationService _invites = InvitationService();
+  final TextEditingController _code = TextEditingController();
+
+  InviteCodeLookup? _found;
+  bool _searching = false;
+  bool _sending = false;
+  bool _sent = false;
+  String? _message;
+  bool _messageIsError = false;
+  StationRole _role = StationRole.member;
+
+  @override
+  void dispose() {
+    _code.dispose();
+    super.dispose();
+  }
+
+  Future<void> _search() async {
+    final code = _code.text.trim();
+    if (code.isEmpty) return;
+
+    setState(() {
+      _searching = true;
+      _found = null;
+      _sent = false;
+      _message = null;
+    });
+
+    try {
+      final result = await _invites.lookupInviteCode(code);
+      if (!mounted) return;
+      setState(() {
+        _found = result;
+        if (result == null) {
+          _message = 'No user has this invite code.';
+          _messageIsError = true;
+        } else if (result.alreadyInvitedByMe) {
+          _message = 'You have already invited this person'
+              '${result.invitedToCompanyName == null ? '' : ' to ${result.invitedToCompanyName}'}. '
+              'Inviting them to another station is still possible.';
+          _messageIsError = false;
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _message = e.toString();
+        _messageIsError = true;
+      });
+    } finally {
+      if (mounted) setState(() => _searching = false);
+    }
+  }
+
+  Future<void> _send() async {
+    final found = _found;
+    if (found == null) return;
+
+    setState(() {
+      _sending = true;
+      _message = null;
+    });
+
+    try {
+      final message = await _invites.sendInvitation(
+        code: found.inviteCode,
+        role: _role,
+        stationId: widget.station.id,
+        companyId: widget.station.companyId,
+      );
+      if (!mounted) return;
+      setState(() {
+        _sent = true;
+        _message = message;
+        _messageIsError = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _message = e.toString();
+        _messageIsError = true;
+      });
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final found = _found;
+
+    return Padding(
+      padding: EdgeInsets.only(
+        left: 20,
+        right: 20,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 24,
+      ),
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text("Invite to ${widget.station.name}",
+                style: context.text.titleLarge),
+            const SizedBox(height: 4),
+            Text(
+              "Ask the person for the invite code shown on their Profile.",
+              style: context.text.bodyMedium
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: _code,
+              textInputAction: TextInputAction.search,
+              onChanged: (_) {
+                if (_found != null || _message != null) {
+                  setState(() {
+                    _found = null;
+                    _sent = false;
+                    _message = null;
+                  });
+                }
+              },
+              onSubmitted: (_) => _search(),
+              decoration: InputDecoration(
+                labelText: "Invite code",
+                prefixIcon: const Icon(Icons.qr_code_2),
+                suffixIcon: _searching
+                    ? const Padding(
+                        padding: EdgeInsets.all(14),
+                        child: SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : IconButton(
+                        tooltip: 'Find person',
+                        icon: const Icon(Icons.search),
+                        onPressed: _search,
+                      ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text('Role', style: context.text.labelLarge),
+            const SizedBox(height: 8),
+            SegmentedButton<StationRole>(
+              showSelectedIcon: false,
+              segments: InvitationService.invitableRoles
+                  .map((r) => ButtonSegment<StationRole>(
+                        value: r,
+                        label: Text(r.label),
+                        icon: Icon(r == StationRole.manager
+                            ? Icons.manage_accounts_outlined
+                            : Icons.person_outline),
+                      ))
+                  .toList(),
+              selected: {_role},
+              onSelectionChanged: _sent
+                  ? null
+                  : (selection) => setState(() => _role = selection.first),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'A station can have one manager. Managers can invite people and '
+              'manage devices; members can view the station.',
+              style: context.text.bodySmall
+                  ?.copyWith(color: context.colors.onSurfaceVariant),
+            ),
+            if (found != null) ...[
+              const SizedBox(height: 16),
+              Card(
+                child: ListTile(
+                  leading: CircleAvatar(
+                    backgroundColor: context.colors.primaryContainer,
+                    foregroundColor: context.colors.onPrimaryContainer,
+                    child: Text(
+                        found.name.isEmpty ? '?' : found.name[0].toUpperCase()),
+                  ),
+                  title: Text(found.name),
+                  subtitle: Text(found.email),
+                ),
+              ),
+              const SizedBox(height: 12),
+              FilledButton.icon(
+                onPressed: (_sent || _sending) ? null : _send,
+                icon: _sending
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Icon(_sent ? Icons.check : Icons.send_outlined),
+                label: Text(_sent
+                    ? 'Invitation sent'
+                    : 'Invite as ${_role.label.toLowerCase()}'),
+              ),
+            ],
+            if (_message != null) ...[
+              const SizedBox(height: 12),
+              InfoBanner(
+                message: _message!,
+                icon: _messageIsError ? Icons.error_outline : Icons.info_outline,
+                color: _messageIsError
+                    ? context.status.danger
+                    : (_sent ? context.status.success : context.status.info),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 }

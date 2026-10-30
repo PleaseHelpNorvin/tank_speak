@@ -1,60 +1,83 @@
-class Invitation {
-  final String username;
-  final String email;
-  final String inviteCode;
-  final int? invitedTo;
-  final bool invited;
+import '../core/json_utils.dart';
+import 'member.dart';
 
-  Invitation({
-    required this.username,
+/// `GET /api/invite/search/{code}`: the user who owns an invite code.
+class InviteCodeLookup {
+  InviteCodeLookup({
+    required this.name,
     required this.email,
     required this.inviteCode,
-    required this.invitedTo,
-    required this.invited,
+    required this.alreadyInvitedByMe,
+    this.invitedToCompanyName,
   });
+
+  /// The backend returns the user's display name under `username`.
+  final String name;
+  final String email;
+  final String inviteCode;
+
+  /// True when the current user has already sent this person an invitation
+  /// (to any station).
+  final bool alreadyInvitedByMe;
+  final String? invitedToCompanyName;
+
+  factory InviteCodeLookup.fromJson(Map<String, dynamic> json) {
+    final invitedTo = json['invited_to'];
+    return InviteCodeLookup(
+      name: asString(json['username']) ?? '',
+      email: asString(json['email']) ?? '',
+      inviteCode: asString(json['invite_code']) ?? '',
+      alreadyInvitedByMe: asBool(json['invited']) ?? false,
+      invitedToCompanyName:
+          invitedTo is Map ? asText(asMap(invitedTo)['name']) : null,
+    );
+  }
+}
+
+/// An `invitations` row (received or sent).
+///
+/// The backend has no status column: accepted invitations are kept, and
+/// rejecting or cancelling deletes the row.
+class Invitation {
+  Invitation({
+    required this.id,
+    required this.companyId,
+    required this.stationId,
+    required this.inviterId,
+    required this.receiverId,
+    required this.role,
+    required this.rawRole,
+    required this.message,
+    this.createdAt,
+  });
+
+  final int id;
+  final int companyId;
+  final int stationId;
+  final int inviterId;
+  final int receiverId;
+  final StationRole? role;
+  final String rawRole;
+  final String message;
+  final DateTime? createdAt;
+
+  String get roleLabel => role?.label ?? rawRole;
 
   factory Invitation.fromJson(Map<String, dynamic> json) {
     return Invitation(
-      username: json['username'] ?? '',
-      email: json['email'] ?? '',
-      inviteCode: json['invite_code'] ?? '',
-      invitedTo: json['invited_to'],
-      invited: json['invited'] ?? false,
+      id: asInt(json['id']) ?? 0,
+      companyId: asInt(json['company_id']) ?? 0,
+      stationId: asInt(json['gas_station']) ?? 0,
+      inviterId: asInt(json['user_inviter']) ?? 0,
+      receiverId: asInt(json['user_receiver']) ?? 0,
+      role: parseStationRole(json['role']),
+      rawRole: asString(json['role']) ?? '',
+      message: asString(json['message']) ?? '',
+      createdAt: parseServerDate(json['created_at']),
     );
   }
 }
 
-class ReceivedInvitation {
-  final int id;
-  final int gasStation;
-  final String message;
-  final String role;
-  final int userInviter;
-  final int userReceiver;
-  final String createdAt;
-  final String updatedAt;
-
-  ReceivedInvitation({
-    required this.id,
-    required this.gasStation,
-    required this.message,
-    required this.role,
-    required this.userInviter,
-    required this.userReceiver,
-    required this.createdAt,
-    required this.updatedAt,
-  });
-
-  factory ReceivedInvitation.fromJson(Map<String, dynamic> json) {
-    return ReceivedInvitation(
-      id: json['id'],
-      gasStation: json['gas_station'],
-      message: json['message'] ?? '',
-      role: json['role'] ?? '',
-      userInviter: json['user_inviter'],
-      userReceiver: json['user_receiver'],
-      createdAt: json['created_at'] ?? '',
-      updatedAt: json['updated_at'] ?? '',
-    );
-  }
-}
+/// Status shown for a received invitation, derived from the stations the
+/// user can access (the backend stores no status).
+enum InvitationStatus { pending, accepted }

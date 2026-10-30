@@ -1,0 +1,21 @@
+{
+ "status": 200,
+ "body": {
+  "device": {
+   "id": 4,
+   "device_key": "90:70:69:82:0B:6C",
+   "name": "Norvi ESP32 90:70:69:82:0B:6C"
+  },
+  "pagination": {
+   "page": 1,
+   "size": 5,
+   "total": 0,
+   "total_pages": 0
+  },
+  "search": "",
+  "level": null,
+  "start_date": null,
+  "end_date": null,
+  "logs": []
+ }
+}
